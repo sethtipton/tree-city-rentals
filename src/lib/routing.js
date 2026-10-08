@@ -1,4 +1,5 @@
 import { UNIT_ROUTE_ALIASES } from "./seed";
+import { normalizeProjectPath } from "./projectPaths.js";
 
 const basePath = normalizeBasePath(import.meta.env.BASE_URL);
 
@@ -176,7 +177,8 @@ export function restoreAuthReturnPath() {
   const target = new URL(next, window.location.origin);
   if (target.origin !== window.location.origin || !target.pathname.startsWith(basePath)) return false;
 
-  window.history.replaceState({}, "", `${target.pathname}${target.search}${target.hash}`);
+  const returnPath = `${target.pathname}${target.search}${target.hash}`;
+  window.history.replaceState({}, "", basePath === "/" ? normalizeProjectPath(returnPath) : returnPath);
   return true;
 }
 
