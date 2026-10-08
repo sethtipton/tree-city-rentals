@@ -16,7 +16,7 @@ export function AppHeader({
   const showBrandIdentity = !property && !peopleAccessOpen;
   const hasHeaderVisual = Boolean(propertyImage) || showBrandIdentity;
   const hasHeaderSubtitle = Boolean((property || showBrandIdentity) && scopeTitle);
-  const title = property?.name || (showBrandIdentity ? "Tree City Rentals" : scopeTitle || "Turnover Tracker");
+  const title = property?.name || (showBrandIdentity ? "Tree City Rentals" : scopeTitle || "Tree City Rentals");
   const headerClassName = [
     "app-header",
     hasHeaderVisual && "has-header-visual",

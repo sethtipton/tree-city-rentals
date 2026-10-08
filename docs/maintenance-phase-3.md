@@ -4,8 +4,8 @@ GitHub Pages remains the host. Main-branch pushes run the existing Actions build
 
 ## Changes
 
-- Production Vite base is `/`. Local development retains `/turnover-tracker/` so existing development tabs continue working.
-- At the production root, the app normalizes legacy `/turnover-tracker/` paths before rendering, preserving query strings and fragments.
+- Production and local development use the Vite base `/`. Saved project-prefix links are normalized to root paths before rendering.
+- The app normalizes both previous and current repository-prefix paths before rendering, preserving query strings, fragments, and maintenance QR tokens.
 - GitHub Pages custom domain is treecityrentals.com. Its Actions deployment does not depend on the CNAME artifact, which also records the intended domain.
 - Bluehost apex A records: 185.199.108.153, 185.199.109.153, 185.199.110.153, 185.199.111.153. www CNAME points to sethtipton.github.io.
 - cpanel, ftp and webmail CNAMEs previously pointed to the apex. They now point to mail.treecityrentals.com, which retains the original Bluehost IP 162.241.217.135. This preserves their DNS destination while moving the website.

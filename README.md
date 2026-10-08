@@ -1,6 +1,6 @@
-# Turnover Tracker
+# Tree City Rentals
 
-Turnover Tracker is a property-operations system for understanding the physical state of rental properties, capturing maintenance observations, and coordinating the work required to maintain them.
+Tree City Rentals is a property-operations system for understanding the physical state of rental properties, capturing maintenance observations, and coordinating the work required to maintain them.
 
 It is also a public portfolio project demonstrating how I approach application architecture: decomposing a real-world domain into structured entities, defining relationships and system boundaries, translating operational requirements into workflows, and preserving traceability between source information, automated analysis, human decisions, and resulting work.
 
@@ -8,9 +8,9 @@ The application is built with React, Vite, Supabase, and server-side AI workflow
 
 ---
 
-## 1. What Turnover Tracker Is
+## 1. What Tree City Rentals Is
 
-Turnover Tracker is a multi-property rental operations platform for owners, property managers, maintenance teams, and tenants.
+Tree City Rentals is a multi-property rental operations platform for owners, property managers, maintenance teams, and tenants.
 
 It provides a private operational workspace for managing:
 
@@ -27,7 +27,7 @@ The system is designed around a simple principle:
 
 > Operational information should remain connected to the property, source, decision, and work it represents.
 
-A maintenance issue may begin as a tenant request, an administrator walkthrough, dictated audio, a photograph, or typed notes. Turnover Tracker preserves that source information while progressively turning it into structured, reviewable operational work.
+A maintenance issue may begin as a tenant request, an administrator walkthrough, dictated audio, a photograph, or typed notes. Tree City Rentals preserves that source information while progressively turning it into structured, reviewable operational work.
 
 AI assists with that process, but does not automatically create authoritative work orders or publish content.
 
@@ -357,7 +357,7 @@ It never automatically publishes or modifies a listing.
 
 ## 5. Security Model
 
-Turnover Tracker uses multiple layers of authorization rather than relying on UI visibility.
+Tree City Rentals uses multiple layers of authorization rather than relying on UI visibility.
 
 ### Authentication
 
@@ -489,7 +489,7 @@ variables or other browser-exposed configuration.
 
 ## 6. AI / Human Review Architecture
 
-Turnover Tracker uses AI to convert unstructured observations into structured operational proposals.
+Tree City Rentals uses AI to convert unstructured observations into structured operational proposals.
 
 The intended pipeline is:
 
@@ -695,7 +695,7 @@ to the hosted application URL.
 Supabase project:
 
 ```text
-Turnover Tracker
+Tree City Rentals
 https://gholbnyvijfyqdwqgjan.supabase.co
 ```
 
@@ -729,16 +729,15 @@ instead.
 Set the Site URL to:
 
 ```text
-https://sethtipton.github.io/turnover-tracker
+https://treecityrentals.com/
 ```
 
 Add these redirect URLs:
 
 ```text
 http://localhost:5173/
-http://localhost:5173/turnover-tracker/
-http://127.0.0.1:5173/turnover-tracker/
-https://sethtipton.github.io/turnover-tracker/
+http://127.0.0.1:5173/
+https://treecityrentals.com/
 ```
 
 ### Google OAuth
@@ -848,7 +847,7 @@ supabase functions deploy \
 The hosted application is available at:
 
 ```text
-https://sethtipton.github.io/turnover-tracker/
+https://treecityrentals.com/
 ```
 
 Build locally with:
@@ -1028,7 +1027,7 @@ This keeps the public authorization surface intentionally narrow.
 
 ## Project Goals
 
-Turnover Tracker is intentionally built around more than CRUD screens.
+Tree City Rentals is intentionally built around more than CRUD screens.
 
 The project explores how a modern web application can represent a real operational domain while keeping:
 

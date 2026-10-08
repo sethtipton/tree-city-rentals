@@ -38,8 +38,8 @@ describe("maintenance QR capabilities", () => {
 
   it("builds a stable public capability URL", () => {
     const token = "a".repeat(MAINTENANCE_CAPABILITY_TOKEN_LENGTH);
-    expect(getMaintenanceQrUrl(token, "https://example.com/turnover-tracker/")).toBe(
-      `https://example.com/turnover-tracker/maintenance/q/${token}/`,
+    expect(getMaintenanceQrUrl(token, "https://example.com/tree-city-rentals/")).toBe(
+      `https://example.com/tree-city-rentals/maintenance/q/${token}/`,
     );
   });
 });

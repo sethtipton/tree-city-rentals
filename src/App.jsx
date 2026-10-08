@@ -375,7 +375,7 @@ function App() {
   }, [properties, units]);
 
   useEffect(() => {
-    document.title = selectedScopeTitle ? `${selectedScopeTitle} | Turnover Tracker` : "Turnover Tracker";
+    document.title = selectedScopeTitle ? `${selectedScopeTitle} | Tree City Rentals` : "Tree City Rentals";
   }, [selectedScopeTitle]);
 
   useEffect(() => {

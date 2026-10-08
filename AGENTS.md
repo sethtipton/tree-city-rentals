@@ -1,6 +1,6 @@
-# Turnover Tracker
+# Tree City Rentals
 
-Turnover Tracker is a property operations intelligence system: it helps users understand the physical state of a property and coordinate the work required to maintain it.
+Tree City Rentals is a property operations intelligence system: it helps users understand the physical state of a property and coordinate the work required to maintain it.
 
 Designed and built as a multi-property rental operations platform using React, Vite, and Supabase, with role-based workspaces, property/unit-level task management, attachment storage, public rental listings, and server-side AI workflows that convert voice walkthroughs into reviewable tasks and materials.
 

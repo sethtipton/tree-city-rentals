@@ -10,7 +10,7 @@ The new outbox uses the maintenance worker's lease, frozen payload, per-recipien
 
 - Database migration and recipient tests executed together in one transaction, then rolled back. Tested missing-recipient availability, two distinct property admins, viewer/blank exclusions, duplicate submission suppression, and unpublished-listing behavior. No inquiry schema or queues are deployed.
 - Unit/component tests cover unavailable-button hiding, retained client payload on retry, validation, rate-limit responses, worker authentication/paused mode, frozen provider retries, permanent/retryable delivery failures and escaped email/Reply-To.
-- Local browser fixture at `/turnover-tracker/tests/browser/inquiry.html` exercises the real dialog with a simulated sender; it never sends mail. Desktop and 390 × 844 mobile viewport checked. Initial field focus, native modal containment, Escape/return focus, failure and retry success checked. Physical iPhone keyboard behavior remains a device check.
+- Local browser fixture at `/tests/browser/inquiry.html` exercises the real dialog with a simulated sender; it never sends mail. Desktop and 390 × 844 mobile viewport checked. Initial field focus, native modal containment, Escape/return focus, failure and retry success checked. Physical iPhone keyboard behavior remains a device check.
 - One real email built by the new template was sent ONLY to sethtipton@gmail.com. Resend ID `01a0c4ef-aef7-73c8-80cd-fc7500648bbd` reports Delivered and shows Reply-To sethtipton@gmail.com. This checks provider delivery/template, not the unpublished scheduler end to end. Gmail search did not locate it during the check; inbox-versus-spam placement is unconfirmed.
 
 ## Publication checklist (requires user approval)

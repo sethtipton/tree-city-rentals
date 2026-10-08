@@ -6,7 +6,7 @@ const snapshot = {
   propertyName: "Carthage", unitName: "Main Unit", description: 'Tap leaks\n<script>alert("x")</script>',
   contactName: "Test tenant", contactEmail: "tenant@example.invalid", contactPhone: "555-0100", propertySlug: "carthage", unitSlug: "main-unit",
 };
-const config = { enabled: "true", jobSecret: "x".repeat(40), apiKey: "test-only", from: "Tree City Rentals <maintenance@example.invalid>", appUrl: "https://example.com/turnover-tracker/" };
+const config = { enabled: "true", jobSecret: "x".repeat(40), apiKey: "test-only", from: "Tree City Rentals <maintenance@example.invalid>", appUrl: "https://example.com/tree-city-rentals/" };
 const delivery = { id: "queue-id", request_id: snapshot.requestId, recipient_email: "admin@example.invalid", snapshot, attempts: 1, attempt_id: "attempt-id", email_payload: null };
 const request = (auth = `Bearer ${config.jobSecret}`) => new Request("https://function.invalid", { method: "POST", headers: { Authorization: auth } });
 function serviceFor(row = delivery) {
@@ -86,5 +86,5 @@ it('uses a private recipient, escaped content and sender Reply-To',()=>{
  expect(email.to).toEqual(['admin@example.invalid']);
  expect(email.reply_to).toBe('tenant@example.invalid');
  expect(email.html).not.toContain('<script>');
- expect(email.text).toContain('https://example.com/turnover-tracker/carthage/main-unit/');
+ expect(email.text).toContain('https://example.com/tree-city-rentals/carthage/main-unit/');
 });
