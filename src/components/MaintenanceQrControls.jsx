@@ -28,14 +28,17 @@ export function MaintenanceQrControls({ property, selectedUnit, propertyUnits })
 
   useEffect(() => {
     if (printUnits.length === 0) return undefined;
+    const originalTitle = document.title;
+    document.title = `Tree City Rentals - ${property.name} - ${printUnits.length === 1 ? printUnits[0].name : "Maintenance QR cards"}`;
     const frame = window.requestAnimationFrame(() => window.print());
     const clearPrintSheet = () => setPrintUnits([]);
     window.addEventListener("afterprint", clearPrintSheet, { once: true });
     return () => {
+      document.title = originalTitle;
       window.cancelAnimationFrame(frame);
       window.removeEventListener("afterprint", clearPrintSheet);
     };
-  }, [printUnits]);
+  }, [printUnits, property.name]);
 
   async function copyUnitUrl() {
     const token = temporaryTokens[unit?.id];
@@ -58,7 +61,7 @@ export function MaintenanceQrControls({ property, selectedUnit, propertyUnits })
       setStatusOverrides((current) => ({ ...current, [unit.id]: true }));
       setMessage(codeIsActive
         ? "A replacement QR code is ready. All earlier printed cards stopped working immediately."
-        : "A maintenance QR code is ready. Print and post the card before leaving this page.");
+        : "A maintenance QR code is ready. Save a PDF before leaving this page, then print and post the card.");
       generateDialogRef.current?.close();
     } catch (error) {
       setMessage(error.message || "We couldn’t generate this QR code.");
@@ -96,7 +99,7 @@ export function MaintenanceQrControls({ property, selectedUnit, propertyUnits })
           <h3 id="maintenance-qr-controls-title"><QrCode size={20} aria-hidden="true" /> Maintenance QR codes</h3>
           <p>A QR grants only the ability to submit one new maintenance request for its unit. Codes are 256-bit secrets, stored only as hashes, and their full link is shown here only when newly generated.</p>
         </div>
-        {temporaryUnitCards.length > 0 && <button className="ghost" type="button" onClick={() => setPrintUnits(temporaryUnitCards)}><Printer size={17} aria-hidden="true" /> Print newly generated cards</button>}
+        {temporaryUnitCards.length > 0 && <button className="ghost" type="button" onClick={() => setPrintUnits(temporaryUnitCards)}><Printer size={17} aria-hidden="true" /> Save PDF or print all cards</button>}
       </div>
 
       {unit ? (
@@ -106,14 +109,24 @@ export function MaintenanceQrControls({ property, selectedUnit, propertyUnits })
               <p className="maintenance-qr-brand">Tree City Rentals</p>
               <h4>{property.name}</h4>
               <p className="maintenance-qr-unit-name">Unit {unit.name}</p>
-              <p>{codeIsActive ? "QR access is active. Generate a replacement to print a fresh card." : "QR access is disabled. Generate a new card to enable maintenance intake."}</p>
+              <p>{codeIsActive ? "QR access is active. To reprint the same code, open your saved PDF and print it. If you have no saved copy, rotate the code to create a replacement; every old card will stop working." : "QR access is disabled. Generate a new card to enable maintenance intake."}</p>
             </div>
           )}
           <div className="maintenance-qr-actions">
             <p><strong>{property.name} · {unit.name}</strong></p>
             {hasTemporaryCode && <p className="maintenance-qr-url"><code>{getMaintenanceQrUrl(temporaryTokens[unit.id])}</code></p>}
             {hasTemporaryCode && <button type="button" onClick={copyUnitUrl}><Copy size={17} aria-hidden="true" /> Copy link</button>}
-            {hasTemporaryCode && <button className="ghost" type="button" onClick={() => setPrintUnits([{ ...unit, maintenanceAccessToken: temporaryTokens[unit.id] }])}><Printer size={17} aria-hidden="true" /> Print this card</button>}
+            {hasTemporaryCode && <div className="maintenance-qr-save-guide">
+              <strong>Keep a copy for easy reprinting</strong>
+              <p>Save this card before leaving this page. Its QR code cannot be retrieved later.</p>
+              <button type="button" onClick={() => setPrintUnits([{ ...unit, maintenanceAccessToken: temporaryTokens[unit.id] }])}><Printer size={17} aria-hidden="true" /> Save PDF or print this card</button>
+              <ol>
+                <li>In the print window, choose <strong>Save as PDF</strong> in Chrome, or <strong>PDF → Save as PDF</strong> in the Mac print dialog.</li>
+                <li>Save the file with the property and unit name, then print it at 100% scale.</li>
+                <li>Scan the printed card with your phone before posting it.</li>
+              </ol>
+              <p>To print more copies later, open that PDF. Saving or printing does not change the code.</p>
+            </div>}
             <button className="ghost maintenance-qr-regenerate" type="button" onClick={() => generateDialogRef.current?.showModal()}><RefreshCw size={17} aria-hidden="true" /> {codeIsActive ? "Rotate QR code" : "Generate QR code"}</button>
             {codeIsActive && <button className="ghost danger-button" type="button" onClick={() => disableDialogRef.current?.showModal()}><ShieldOff size={17} aria-hidden="true" /> Disable QR access</button>}
             <p className="maintenance-qr-note">{codeIsActive ? "Rotating or disabling immediately invalidates every previously printed card." : "Generating a replacement creates a new code; an old disabled code is never re-enabled."}</p>
@@ -131,7 +144,7 @@ export function MaintenanceQrControls({ property, selectedUnit, propertyUnits })
         <form method="dialog" onSubmit={(event) => { event.preventDefault(); generate(); }}>
           <p className="eyebrow">{codeIsActive ? "Replace QR code" : "Create QR code"}</p>
           <h2 id="maintenance-qr-generate-title">{codeIsActive ? `Rotate ${unit?.name}’s maintenance QR code?` : `Generate a maintenance QR code for ${unit?.name}?`}</h2>
-          <p>{codeIsActive ? "The existing printed code will stop working immediately. Print and post the replacement before discarding the old card." : "The new capability will be shown once so you can print the card. It is not stored in readable form."}</p>
+          <p>{codeIsActive ? "The existing printed code will stop working immediately. Save a PDF, print and post the replacement before discarding the old card." : "The new code will be shown on this page so you can save a PDF and print the card. It cannot be retrieved after you leave."}</p>
           <div>
             <button className="ghost" type="button" onClick={() => generateDialogRef.current?.close()}>Cancel</button>
             <button type="submit" disabled={busy}>{busy ? "Generating…" : codeIsActive ? "Rotate QR code" : "Generate QR code"}</button>

@@ -4556,6 +4556,11 @@ ul.admin-walkthrough-steps {
 
 .maintenance-qr-actions > p { margin: 0; }
 .maintenance-qr-url code { overflow-wrap: anywhere; color: var(--color-primary); font-size: var(--font-size-sm); font-weight: var(--font-weight-extrabold); }
+.maintenance-qr-save-guide { width: 100%; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
+.maintenance-qr-save-guide p, .maintenance-qr-save-guide ol { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.maintenance-qr-save-guide ol { padding-inline-start: 1.4rem; }
+.maintenance-qr-save-guide li + li { margin-block-start: var(--space-2); }
+
 .maintenance-qr-regenerate { color: #8f3434; }
 .maintenance-qr-note { font-size: var(--font-size-sm); }
 

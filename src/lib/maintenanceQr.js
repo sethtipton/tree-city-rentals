@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { getScopePath } from "./routing";
 
 export const MAINTENANCE_QR_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
@@ -31,4 +32,23 @@ export async function generateUnitMaintenanceQr(unitId) {
 export async function disableUnitMaintenanceQr(unitId) {
   const { error } = await supabase.rpc("disable_unit_maintenance_access", { target_unit_id: unitId });
   if (error) throw error;
+}
+
+// Only the database resolver can supply this routing scope; QR possession is not edit access.
+export async function resolveAdminMaintenanceQr(token) {
+  if (!isMaintenanceQrToken(token)) return null;
+  const { data, error } = await supabase.rpc("resolve_admin_maintenance_qr", { target_token: token });
+  if (error) throw error;
+  const scope = data?.[0];
+  if (!scope) return null;
+  const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+  if (!uuid.test(scope.property_id) || !uuid.test(scope.unit_id)
+    || typeof scope.property_name !== "string" || !scope.property_name.trim()
+    || typeof scope.unit_name !== "string" || !scope.unit_name.trim()) {
+    throw new Error("Invalid maintenance workspace scope.");
+  }
+  return getScopePath(
+    { id: scope.property_id, name: scope.property_name },
+    { id: scope.unit_id, property_id: scope.property_id, name: scope.unit_name },
+  );
 }

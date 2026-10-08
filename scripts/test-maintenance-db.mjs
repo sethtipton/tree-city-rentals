@@ -15,8 +15,11 @@ if (process.argv.includes("--rehearse")) {
     .map((name) => stripTransaction(readFileSync(join("supabase/migrations", name), "utf8"))).join("\n");
 }
 const directory = mkdtempSync(join(tmpdir(), "maintenance-db-tests-"));
+const suites = ["maintenance_rls", "public_maintenance_submissions", "maintenance_email", "admin_maintenance_qr"];
+const selectedSuite = process.argv.find((argument) => argument.startsWith("--suite="))?.slice("--suite=".length);
+if (selectedSuite && !suites.includes(selectedSuite)) throw new Error("Unknown maintenance test suite.");
 try {
-  for (const name of ["maintenance_rls", "public_maintenance_submissions", "maintenance_email"]) {
+  for (const name of selectedSuite ? [selectedSuite] : suites) {
     let sql = stripTransaction(readFileSync(`supabase/tests/${name}.sql`, "utf8"));
     let prefix = "begin;\nset local statement_timeout='25s';\n" + migrations + "\n";
     if (name === "maintenance_rls") {

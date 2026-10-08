@@ -1,35 +1,54 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, CheckCircle2, Mic, ShieldAlert, Square, Wrench } from "lucide-react";
 import { inspectPublicMaintenanceCapability, submitPublicMaintenanceRequest } from "../lib/maintenance";
-import { isMaintenanceQrToken } from "../lib/maintenanceQr";
+import { isMaintenanceQrToken, resolveAdminMaintenanceQr } from "../lib/maintenanceQr";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
 import { formatDuration } from "../lib/media";
 
 const MAX_PHOTOS = 5;
 
-export function MaintenanceQrRoute({ token }) {
-  const [state, setState] = useState({ kind: "loading", scope: null });
+function openUnitWorkspace(path) {
+  // A full navigation reuses normal workspace initialization and its RLS-filtered loaders.
+  window.location.replace(path);
+}
+
+export function MaintenanceQrRoute({ token, user, onSignIn, onOpenWorkspace = openUnitWorkspace }) {
+  const userId = user?.id || "";
+  const [state, setState] = useState({ kind: "loading", scope: null, token, userId });
+  const currentState = state.token === token && state.userId === userId
+    ? state : { kind: "loading", scope: null };
 
   useEffect(() => {
     let active = true;
-    setState({ kind: "loading", scope: null });
+    const update = (next) => { if (active) setState({ ...next, token, userId }); };
+    update({ kind: "loading", scope: null });
 
     async function inspect() {
       if (!isMaintenanceQrToken(token)) {
-        if (active) setState({ kind: "invalid", scope: null });
+        update({ kind: "invalid", scope: null });
         return;
       }
       try {
+        if (userId) {
+          // Resolver failures safely fall back to existing public validation/intake.
+          const path = await resolveAdminMaintenanceQr(token).catch(() => null);
+          if (!active) return;
+          if (path) {
+            update({ kind: "redirecting", scope: null });
+            onOpenWorkspace(path);
+            return;
+          }
+        }
         const scope = await inspectPublicMaintenanceCapability(token);
-        if (active) setState({ kind: "ready", scope });
+        update({ kind: "ready", scope });
       } catch {
-        if (active) setState({ kind: "invalid", scope: null });
+        update({ kind: "invalid", scope: null });
       }
     }
 
     inspect();
     return () => { active = false; };
-  }, [token]);
+  }, [token, userId, onOpenWorkspace]);
 
   useEffect(() => {
     document.title = "Maintenance request | Tree City Rentals";
@@ -44,9 +63,9 @@ export function MaintenanceQrRoute({ token }) {
           <h1><Wrench size={25} aria-hidden="true" /><span>Submit a maintenance request</span></h1>
         </header>
 
-        {state.kind === "loading" && <section className="tenant-qr-card" aria-live="polite"><p>Checking this maintenance link…</p></section>}
+        {(currentState.kind === "loading" || currentState.kind === "redirecting") && <section className="tenant-qr-card" aria-live="polite"><p>{userId ? "Opening property…" : "Checking this maintenance link…"}</p></section>}
 
-        {state.kind === "invalid" && (
+        {currentState.kind === "invalid" && (
           <section className="tenant-qr-card tenant-qr-empty" aria-labelledby="maintenance-link-unavailable">
             <ShieldAlert size={28} aria-hidden="true" />
             <h2 id="maintenance-link-unavailable">This maintenance link is unavailable.</h2>
@@ -54,7 +73,10 @@ export function MaintenanceQrRoute({ token }) {
           </section>
         )}
 
-        {state.kind === "ready" && state.scope && <PublicMaintenanceForm token={token} scope={state.scope} />}
+        {currentState.kind === "ready" && currentState.scope && <PublicMaintenanceForm key={`${token}:${userId}`} token={token} scope={currentState.scope} />}
+        {currentState.kind === "ready" && !userId && onSignIn && (
+          <p className="field-hint">Property team? <button type="button" onClick={onSignIn}>Sign in</button></p>
+        )}
       </main>
     </>
   );
