@@ -1,0 +1,272 @@
+{
+  "codeCommit": "1fc91890838ff4fba32fdc7be05af383aa23098a",
+  "method": "Lighthouse 13.5.0 / Chrome 155; three mobile runs per URL; per-metric medians; default simulated mobile throttling; desktop one run per sampled URL.",
+  "freshProductionBefore": [
+    {
+      "name": "home",
+      "url": "https://treecityrentals.com/",
+      "device": "mobile",
+      "runs": 3,
+      "performance": 85,
+      "seo": 100,
+      "lcpMs": 4313.2506,
+      "cls": 0,
+      "tbtMs": 0,
+      "bytes": 686613
+    }
+  ],
+  "currentProduction": [
+    {
+      "name": "home",
+      "url": "https://treecityrentals.com/",
+      "device": "mobile",
+      "runs": 3,
+      "performance": 91,
+      "seo": 100,
+      "lcpMs": 3410.6171,
+      "cls": 0,
+      "tbtMs": 0,
+      "bytes": 498852
+    },
+    {
+      "name": "home",
+      "url": "https://treecityrentals.com/",
+      "device": "desktop",
+      "runs": 1,
+      "performance": 100,
+      "seo": 100,
+      "lcpMs": 672.17185,
+      "cls": 0,
+      "tbtMs": 0,
+      "bytes": 233982
+    },
+    {
+      "name": "property",
+      "url": "https://treecityrentals.com/441-park/",
+      "device": "mobile",
+      "runs": 3,
+      "performance": 97,
+      "seo": 100,
+      "lcpMs": 2388.73261,
+      "cls": 0,
+      "tbtMs": 0,
+      "bytes": 288103
+    },
+    {
+      "name": "listing",
+      "url": "https://treecityrentals.com/469-carthage/main-unit/",
+      "device": "mobile",
+      "runs": 3,
+      "performance": 98,
+      "seo": 100,
+      "lcpMs": 2277.74054,
+      "cls": 0.02516452151638975,
+      "tbtMs": 0,
+      "bytes": 259116
+    },
+    {
+      "name": "listing",
+      "url": "https://treecityrentals.com/469-carthage/main-unit/",
+      "device": "desktop",
+      "runs": 1,
+      "performance": 100,
+      "seo": 100,
+      "lcpMs": 669.8571000000001,
+      "cls": 0.01393307065931179,
+      "tbtMs": 0,
+      "bytes": 366490
+    }
+  ],
+  "currentLocal": [
+    {
+      "name": "home",
+      "url": "http://127.0.0.1:4187/",
+      "device": "mobile",
+      "runs": 3,
+      "performance": 91,
+      "seo": 100,
+      "lcpMs": 3453.5915,
+      "cls": 0,
+      "tbtMs": 0,
+      "bytes": 497310
+    },
+    {
+      "name": "home",
+      "url": "http://127.0.0.1:4187/",
+      "device": "desktop",
+      "runs": 1,
+      "performance": 100,
+      "seo": 100,
+      "lcpMs": 444.3237,
+      "cls": 0,
+      "tbtMs": 0,
+      "bytes": 232564
+    },
+    {
+      "name": "property",
+      "url": "http://127.0.0.1:4187/441-park/",
+      "device": "mobile",
+      "runs": 3,
+      "performance": 98,
+      "seo": 100,
+      "lcpMs": 2252.5939,
+      "cls": 0,
+      "tbtMs": 0,
+      "bytes": 286606
+    },
+    {
+      "name": "listing",
+      "url": "http://127.0.0.1:4187/469-carthage/main-unit/",
+      "device": "mobile",
+      "runs": 3,
+      "performance": 98,
+      "seo": 100,
+      "lcpMs": 2252.9359999999997,
+      "cls": 0.02516452151638975,
+      "tbtMs": 0,
+      "bytes": 257591
+    },
+    {
+      "name": "listing",
+      "url": "http://127.0.0.1:4187/469-carthage/main-unit/",
+      "device": "desktop",
+      "runs": 1,
+      "performance": 100,
+      "seo": 100,
+      "lcpMs": 563.9869,
+      "cls": 0.01393307065931179,
+      "tbtMs": 0,
+      "bytes": 364922
+    }
+  ],
+  "originalAudit": [
+    {
+      "url": "http://127.0.0.1:4187/",
+      "device": "desktop",
+      "runs": 1,
+      "medians": {
+        "score": 100,
+        "seo": 100,
+        "fcpMs": 363.8663,
+        "lcpMs": 743.8663,
+        "cls": 0,
+        "tbtMs": 0
+      },
+      "lcpRangeMs": [
+        743.8663,
+        743.8663
+      ]
+    },
+    {
+      "url": "http://127.0.0.1:4187/",
+      "device": "mobile",
+      "runs": 3,
+      "medians": {
+        "score": 88,
+        "seo": 100,
+        "fcpMs": 1654.162,
+        "lcpMs": 3829.1620000000003,
+        "cls": 0.03255047198743403,
+        "tbtMs": 0
+      },
+      "lcpRangeMs": [
+        3827.2493999999997,
+        3829.8162
+      ]
+    },
+    {
+      "url": "http://127.0.0.1:4187/469-carthage/main-unit/",
+      "device": "desktop",
+      "runs": 1,
+      "medians": {
+        "score": 100,
+        "seo": 100,
+        "fcpMs": 363.5434,
+        "lcpMs": 603.5434,
+        "cls": 0.01393307065931179,
+        "tbtMs": 0
+      },
+      "lcpRangeMs": [
+        603.5434,
+        603.5434
+      ]
+    },
+    {
+      "url": "http://127.0.0.1:4187/469-carthage/main-unit/",
+      "device": "mobile",
+      "runs": 3,
+      "medians": {
+        "score": 93,
+        "seo": 100,
+        "fcpMs": 1657.2469,
+        "lcpMs": 3152.7089,
+        "cls": 0.02516452151638975,
+        "tbtMs": 0
+      },
+      "lcpRangeMs": [
+        3152.6414,
+        3157.2469
+      ]
+    },
+    {
+      "url": "http://127.0.0.1:4187/441-park/",
+      "device": "mobile",
+      "runs": 3,
+      "medians": {
+        "score": 94,
+        "seo": 100,
+        "fcpMs": 1653.9779,
+        "lcpMs": 3002.9273000000003,
+        "cls": 0,
+        "tbtMs": 0
+      },
+      "lcpRangeMs": [
+        3002.7127,
+        3003.9779
+      ]
+    },
+    {
+      "url": "https://treecityrentals.com/",
+      "device": "mobile",
+      "runs": 3,
+      "medians": {
+        "score": 79,
+        "seo": 91,
+        "fcpMs": 1953.24937,
+        "lcpMs": 5240.80411,
+        "cls": 0,
+        "tbtMs": 0
+      },
+      "lcpRangeMs": [
+        3932.1817,
+        5315.711380000001
+      ]
+    }
+  ],
+  "productionHomeRange": [
+    {
+      "performance": 100,
+      "lcpMs": 1771.0038799999998
+    },
+    {
+      "performance": 85,
+      "lcpMs": 4176.46233
+    },
+    {
+      "performance": 91,
+      "lcpMs": 3410.6171
+    }
+  ],
+  "validity": "Original production property/listing URLs returned 404 and have no valid earlier production performance baseline. Local comparisons include intervening already-committed inquiry overlay changes. Lab measurements do not establish field p75 Core Web Vitals.",
+  "improvements": {
+    "homeVsOriginalAudit": {
+      "scorePoints": 12,
+      "lcpPercentReduction": 34.92187404043232
+    },
+    "homeVsFreshBefore": {
+      "scorePoints": 6,
+      "lcpPercentReduction": 20.926989496042737,
+      "transferPercentReduction": 27.345972185204765
+    }
+  }
+}
