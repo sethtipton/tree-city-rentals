@@ -42,10 +42,10 @@ export function InquiryDialog({ listing, onClose, send = sendListingInquiry }) {
  </dialog>;
 }
 
-export function ListingInquiry({ listing }) {
+export function ListingInquiry({ listing, send }) {
  const [available,setAvailable]=useState(false);
  const [open,setOpen]=useState(false);
  useEffect(()=>{let active=true;setAvailable(false);if(supabase) supabase.rpc('listing_inquiry_available',{target_unit_id:listing.unit_id}).then(({data,error})=>{if(active) setAvailable(!error && data===true);}).catch(()=>{if(active) setAvailable(false);});return()=>{active=false;};},[listing.unit_id]);
  if(!available) return null;
- return <><button className="listing-rent inquiry-link" type="button" onClick={()=>setOpen(true)}>Contact for rent</button>{open && <InquiryDialog listing={listing} onClose={()=>setOpen(false)} />}</>;
+ return <><button className="listing-inquiry-button" type="button" onClick={()=>setOpen(true)}>Ask about this home</button>{open && <InquiryDialog listing={listing} onClose={()=>setOpen(false)} send={send} />}</>;
 }

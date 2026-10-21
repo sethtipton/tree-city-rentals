@@ -143,60 +143,32 @@ export async function submitMaintenanceRequest({
   sourceType,
   title,
   visibility,
+  submission = {},
 }) {
   const isTenant = Boolean(tenantMembershipId);
   const requestSource = sourceType || (isTenant
     ? audioFile ? "tenant-audio" : "tenant-text"
     : audioFile ? "admin-audio" : "admin-text");
   const requestTitle = title?.trim() || getRequestTitle(description, audioFile, isTenant);
-  const { data: request, error } = await supabase
-    .from("maintenance_requests")
-    .insert({
-      workspace_id: workspaceId,
-      property_id: propertyId,
-      unit_id: unitId || null,
-      tenant_membership_id: tenantMembershipId,
-      source_type: requestSource,
-      submitter_id: user.id,
-      submitter_email: user.email || null,
-      title: requestTitle,
-      original_description: description.trim(),
-    })
-    .select()
-    .single();
-  if (error) throw error;
+  submission.id ||= crypto.randomUUID();
+  const request = submission.request || await insertRecoverable("maintenance_requests", {
+    id: submission.id,
+    workspace_id: workspaceId,
+    property_id: propertyId,
+    unit_id: unitId || null,
+    tenant_membership_id: tenantMembershipId,
+    source_type: requestSource,
+    submitter_id: user.id,
+    submitter_email: user.email || null,
+    title: requestTitle,
+    original_description: description.trim(),
+  });
+  submission.request = request;
+  submission.steps ||= new Map();
 
   try {
-    if (description.trim()) {
-      await addMaintenanceEntry({
-        requestId: request.id,
-        user,
-        authorType: isTenant ? "tenant" : "admin",
-        entryType: "description",
-        visibility,
-        content: description.trim(),
-      });
-    }
-    if (audioFile) {
-      await addMaintenanceMedia({
-        request,
-        user,
-        file: audioFile,
-        authorType: isTenant ? "tenant" : "admin",
-        entryType: "audio",
-        visibility,
-      });
-    }
-    for (const photoFile of photoFiles) {
-      await addMaintenanceMedia({
-        request,
-        user,
-        file: photoFile,
-        authorType: isTenant ? "tenant" : "admin",
-        entryType: "photo",
-        visibility,
-      });
-    }
+    await saveMaintenanceSources({ request, user, description, audioFile, photoFiles, visibility,
+      authorType: isTenant ? "tenant" : "admin", entryType: "description", submission });
     await processMaintenanceRequest(request.id);
     return request;
   } catch (sourceError) {
@@ -252,47 +224,56 @@ export async function submitPublicMaintenanceRequest({
   return data;
 }
 
-export async function addMaintenanceInformation({ request, user, content = "", audioFile = null, photoFiles = [], visibility }) {
-  const authorType = visibility === "tenant" ? "tenant" : "admin";
-  if (content.trim()) {
-    await addMaintenanceEntry({
-      requestId: request.id,
-      user,
-      authorType,
-      entryType: "note",
-      visibility,
-      content: content.trim(),
-    });
-  }
-  if (audioFile) {
-    await addMaintenanceMedia({ request, user, file: audioFile, authorType, entryType: "audio", visibility });
-  }
-  for (const photoFile of photoFiles) {
-    await addMaintenanceMedia({ request, user, file: photoFile, authorType, entryType: "photo", visibility });
-  }
+export async function addMaintenanceInformation({ request, user, content = "", audioFile = null, photoFiles = [], visibility, submission = {} }) {
+  submission.steps ||= new Map();
+  await saveMaintenanceSources({ request, user, description: content, audioFile, photoFiles, visibility,
+    authorType: visibility === "tenant" ? "tenant" : "admin", entryType: "note", submission });
   await processMaintenanceRequest(request.id);
 }
 
-export async function addMaintenanceEntry({ requestId, user, authorType, entryType, visibility, content = "" }) {
-  const { data, error } = await supabase
-    .from("maintenance_request_entries")
-    .insert({
-      maintenance_request_id: requestId,
-      author_type: authorType,
-      author_id: user.id,
-      author_email: user.email || null,
-      entry_type: entryType,
-      visibility,
-      content,
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+async function saveMaintenanceSources({ request, user, description, audioFile, photoFiles, visibility, authorType, entryType, submission }) {
+  async function step(key, save) {
+    if (!submission.steps.has(key)) submission.steps.set(key, {});
+    const progress = submission.steps.get(key);
+    if (!progress.done) { await save(progress); progress.done = true; }
+  }
+  if (description.trim()) await step("description", async (progress) => {
+    progress.id ||= crypto.randomUUID();
+    await addMaintenanceEntry({ requestId: request.id, user, authorType, entryType, visibility, content: description.trim(), id: progress.id });
+  });
+  if (audioFile) await step("audio", progress => addMaintenanceMedia({ request, user, file: audioFile, authorType, entryType: "audio", visibility, progress }));
+  for (const [index, file] of photoFiles.entries()) {
+    await step(`photo:${index}`, progress => addMaintenanceMedia({ request, user, file, authorType, entryType: "photo", visibility, progress }));
+  }
 }
 
-export async function addMaintenanceMedia({ request, user, file, authorType, entryType, visibility }) {
+// Deterministic IDs let retries recover an insert whose response was lost.
+async function insertRecoverable(table, row) {
+  const { data, error } = await supabase.from(table).insert(row).select().single();
+  if (!error) return data;
+  const existing = await supabase.from(table).select("*").eq("id", row.id).maybeSingle();
+  if (!existing.error && existing.data) return existing.data;
+  throw error;
+}
+
+export async function addMaintenanceEntry({ requestId, user, authorType, entryType, visibility, content = "", id = crypto.randomUUID() }) {
+  return insertRecoverable("maintenance_request_entries", {
+    id,
+    maintenance_request_id: requestId,
+    author_type: authorType,
+    author_id: user.id,
+    author_email: user.email || null,
+    entry_type: entryType,
+    visibility,
+    content,
+  });
+}
+
+export async function addMaintenanceMedia({ request, user, file, authorType, entryType, visibility, progress = {} }) {
+  progress.entryId ||= crypto.randomUUID();
+  progress.attachmentId ||= crypto.randomUUID();
   const entry = await addMaintenanceEntry({
+    id: progress.entryId,
     requestId: request.id,
     user,
     authorType,
@@ -300,30 +281,22 @@ export async function addMaintenanceMedia({ request, user, file, authorType, ent
     visibility,
   });
   const safeName = file.name.replace(/[^a-z0-9._-]+/gi, "-").toLowerCase();
-  const path = `${request.workspace_id}/${request.id}/${entry.id}/${crypto.randomUUID()}-${safeName}`;
+  const path = `${request.workspace_id}/${request.id}/${entry.id}/${progress.attachmentId}-${safeName}`;
   const { error: uploadError } = await supabase.storage
     .from(MAINTENANCE_BUCKET)
     .upload(path, file, { upsert: false });
-  if (uploadError) throw uploadError;
+  if (uploadError && String(uploadError.statusCode) !== "409") throw uploadError;
 
-  const { data, error } = await supabase
-    .from("maintenance_attachments")
-    .insert({
-      maintenance_request_id: request.id,
-      entry_id: entry.id,
-      visibility,
-      kind: getAttachmentKind(file, entryType === "audio" ? "audio" : "file"),
-      file_name: file.name,
-      mime_type: file.type || "application/octet-stream",
-      storage_path: path,
-    })
-    .select()
-    .single();
-  if (error) {
-    await supabase.storage.from(MAINTENANCE_BUCKET).remove([path]);
-    throw error;
-  }
-  return data;
+  return insertRecoverable("maintenance_attachments", {
+    id: progress.attachmentId,
+    maintenance_request_id: request.id,
+    entry_id: entry.id,
+    visibility,
+    kind: getAttachmentKind(file, entryType === "audio" ? "audio" : "file"),
+    file_name: file.name,
+    mime_type: file.type || "application/octet-stream",
+    storage_path: path,
+  });
 }
 
 export async function getMaintenanceAttachmentUrl(path) {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Camera, Check, ChevronDown, ChevronRight, CirclePlus, FileAudio, ListChecks, Mic, RefreshCw, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
+import { useSignedAttachmentUrls } from "../hooks/useSignedAttachmentUrls";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
 import { addItem, loadItems, uploadAttachment } from "../lib/data";
 import {
@@ -429,17 +430,10 @@ function AdminRequestComposer({ propertyId, unitId, workspaceId, busy, onSubmit,
 }
 
 function AdminCaseFile({ detail, busy, onRetry, onResolve, onItemAction, onAddInformation, onAttachmentLinksChange, message }) {
-  const [urls, setUrls] = useState({});
-  const [attachmentError, setAttachmentError] = useState("");
-  useEffect(() => {
-    let active = true;
-    setAttachmentError("");
-    const attachments = [...(detail?.attachments || []), ...(detail?.linkedAttachments || [])];
-    Promise.all(attachments.map(async (attachment) => [attachment.storage_path, await getMaintenanceAttachmentUrl(attachment.storage_path)]))
-      .then((entries) => { if (active) setUrls(Object.fromEntries(entries)); })
-      .catch(() => { if (active) setAttachmentError("Attachments could not be loaded. Refresh the inbox to try again."); });
-    return () => { active = false; };
-  }, [detail]);
+  const allAttachments = [...(detail?.attachments || []), ...(detail?.linkedAttachments || [])];
+  const urls = useSignedAttachmentUrls(allAttachments, getMaintenanceAttachmentUrl);
+  const attachmentError = allAttachments.some((attachment) => !urls[attachment.storage_path])
+    ? "Some attachments are loading. Temporary failures are retried automatically." : "";
 
   if (!detail) return <section className="maintenance-case-file maintenance-case-empty"><ListChecks size={25} aria-hidden="true" /><p>Select a case file to inspect its history and proposed work.</p>{message && <p className="message" role="status">{message}</p>}</section>;
   const { request, entries, attachments, attachmentLinks, childRequests, linkedAttachments, analyses, items, events } = detail;

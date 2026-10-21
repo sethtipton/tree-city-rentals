@@ -208,7 +208,7 @@ export function getScopePath(property, unit) {
 
 export function getPublicListingPath(propertySlug, unitSlug = "") {
   const segments = [propertySlug, unitSlug].filter(Boolean).map(encodeURIComponent);
-  return `${basePath}${segments.join("/")}/`;
+  return segments.length ? `${basePath}${segments.join("/")}/` : basePath;
 }
 
 function getCurrentRouteParts({ preserveCase = false } = {}) {

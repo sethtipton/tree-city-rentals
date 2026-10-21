@@ -1,3 +1,4 @@
+import { AI_CALL_TIMEOUT_MS } from "../_shared/maintenance-processing.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.111.0";
 
 type ListingField = "listing_headline" | "listing_description" | "amenities";
@@ -108,6 +109,7 @@ async function draftListingCopy({ apiKey, model, field, property, unit }: {
   const facts = JSON.stringify({ property, unit });
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
+    signal: AbortSignal.timeout(AI_CALL_TIMEOUT_MS),
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",

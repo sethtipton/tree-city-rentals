@@ -1,3 +1,8 @@
+project_id = "tree-city-rentals"
+
+[db]
+major_version = 17
+
 [functions.submit-maintenance-request]
 verify_jwt = false
 

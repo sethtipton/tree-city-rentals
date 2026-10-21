@@ -31,3 +31,10 @@ it("continues rejecting sign-in return paths to another origin", () => {
   expect(restoreAuthReturnPath()).toBe(false);
   expect(window.location.pathname).toBe("/");
 });
+
+it("builds a valid public home link and encoded listing paths", async () => {
+  const { getPublicListingPath } = await import("../src/lib/routing.js");
+  expect(getPublicListingPath("")).toBe("/");
+  expect(getPublicListingPath("469-carthage", "main-unit")).toBe("/469-carthage/main-unit/");
+  expect(getPublicListingPath("a b")).toBe("/a%20b/");
+});

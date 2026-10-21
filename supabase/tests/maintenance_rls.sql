@@ -1,5 +1,7 @@
 begin;
-select plan(26);
+select plan(36);
+
+select ok(not has_function_privilege('anon', 'public.claim_maintenance_processing(uuid,boolean)', 'execute'), 'anonymous callers cannot claim processing');
 
 select ok(not has_function_privilege('anon', 'public.resolve_public_maintenance_capability(text)', 'execute'), 'anonymous callers cannot execute the QR capability resolver');
 select ok(not has_function_privilege('anon', 'public.claim_public_maintenance_submission(text,uuid,text)', 'execute'), 'anonymous callers cannot execute the QR submission claim RPC');
@@ -97,10 +99,25 @@ select is_empty('select * from public.workspace_members', 'tenant A cannot read 
 select is_empty('select * from public.property_members', 'tenant A cannot read property members');
 select is_empty('select * from public.maintenance_analyses', 'tenant A cannot read immutable AI analyses');
 
+select set_config('test.old_lease', public.claim_maintenance_processing('99999999-9999-9999-9999-999999999991', false)::text, true);
+select ok(current_setting('test.old_lease')::jsonb->>'status' = 'claimed', 'tenant can start ordinary processing for their request');
+select throws_ok($$select public.claim_maintenance_processing('99999999-9999-9999-9999-999999999991', true)$$, '42501', 'maintenance_processing_forbidden', 'tenant cannot force reanalysis');
+select ok(public.claim_maintenance_processing('99999999-9999-9999-9999-999999999991', false)->>'status' = 'already-processing', 'active lease prevents a second worker');
+reset role;
+update public.maintenance_processing_leases set expires_at = now() - interval '1 second'
+where maintenance_request_id = '99999999-9999-9999-9999-999999999991';
+set local role authenticated;
+select set_config('test.new_lease', public.claim_maintenance_processing('99999999-9999-9999-9999-999999999991', false)::text, true);
+select ok(current_setting('test.new_lease')::jsonb->>'status' = 'claimed', 'expired processing lease can be reclaimed');
+select ok(not public.release_maintenance_processing('99999999-9999-9999-9999-999999999991', (current_setting('test.old_lease')::jsonb->>'token')::uuid), 'stale worker cannot release a new lease');
+select ok(public.release_maintenance_processing('99999999-9999-9999-9999-999999999991', (current_setting('test.new_lease')::jsonb->>'token')::uuid), 'current worker can release its lease');
+
 reset role;
 select set_config('request.jwt.claim.sub', '22222222-2222-2222-2222-222222222222', true);
 select set_config('request.jwt.claims', '{"sub":"22222222-2222-2222-2222-222222222222","email":"tenant-b@example.test","role":"authenticated"}', true);
 set local role authenticated;
+
+select throws_ok($$select public.claim_maintenance_processing('99999999-9999-9999-9999-999999999991', false)$$, '42501', 'maintenance_processing_forbidden', 'tenant B cannot process tenant A request');
 
 select is_empty(
   'select * from public.maintenance_requests where id = ''99999999-9999-9999-9999-999999999991''',
@@ -150,6 +167,10 @@ select ok(exists (
 ), 'only the public capability hash is persisted on the unit');
 select public.disable_unit_maintenance_access('cccccccc-cccc-cccc-cccc-ccccccccccc1');
 select ok(not (select maintenance_access_enabled from public.units where id = 'cccccccc-cccc-cccc-cccc-ccccccccccc1'), 'property admin can immediately disable a capability');
+
+select set_config('test.admin_lease', public.claim_maintenance_processing('99999999-9999-9999-9999-999999999991', true)::text, true);
+select ok(current_setting('test.admin_lease')::jsonb->>'status' = 'claimed', 'assigned admin can force reanalysis');
+select ok(public.release_maintenance_processing('99999999-9999-9999-9999-999999999991', (current_setting('test.admin_lease')::jsonb->>'token')::uuid), 'admin can release its processing lease');
 
 select * from finish();
 rollback;

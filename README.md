@@ -1040,3 +1040,11 @@ The project explores how a modern web application can represent a real operation
 * and the user interface separated from the underlying operational model.
 
 The result is still a practical rental-management application, but the architecture is intended to remain understandable as the number of properties, users, workflows, and automated processes grows.
+
+## Public listing search and sharing
+
+`npm run build` fetches the anonymous public listings RPC and generates listing-specific HTML, canonical URLs, Open Graph/Twitter metadata, a sitemap, and robots.txt. Existing property photos are reused for sharing previews. Newly published properties and units are included automatically on the next build.
+
+The build uses the existing `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Optional `VITE_PUBLIC_SITE_URL` sets the production HTTPS origin (default `https://treecityrentals.com/`); it is separate from maintenance QR destinations. A public API failure stops the build rather than publishing empty listing pages.
+
+After editing or publishing rental listings, rerun the GitHub Pages deployment to refresh crawler-facing HTML and social previews. Browser content continues to refresh from Supabase. Verify that the homepage, each published property and unit URL, `/sitemap.xml`, and `/robots.txt` return HTTP 200 after deployment. Public listing routes must contain their page content and matching canonical URL in the initial HTML.

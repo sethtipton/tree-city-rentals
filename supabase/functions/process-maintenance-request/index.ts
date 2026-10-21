@@ -15,6 +15,8 @@ import {
 } from "../_shared/maintenance-domain.ts";
 import { selectRelevantHistory, type HistoryCandidate, type RelevantHistoryRecord } from "../_shared/maintenance-history.ts";
 
+import { AI_CALL_TIMEOUT_MS, PROCESSING_DEADLINE_MS, deadlineFetch, withMaintenanceProcessingLease } from "../_shared/maintenance-processing.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -87,9 +89,10 @@ export default {
       if (!openAiApiKey) return jsonResponse({ error: "OpenAI credentials are not configured." }, 503);
 
       const requester = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: authHeader } },
+        global: { headers: { Authorization: authHeader }, fetch: (input, init) => deadlineFetch(AbortSignal.timeout(10_000))(input, init) },
       });
-      const service = createClient(supabaseUrl, serviceRoleKey);
+      const processingSignal = AbortSignal.timeout(PROCESSING_DEADLINE_MS);
+      const service = createClient(supabaseUrl, serviceRoleKey, { global: { fetch: deadlineFetch(processingSignal) } });
       const {
         data: { user },
         error: userError,
@@ -97,56 +100,56 @@ export default {
       if (userError || !user) return jsonResponse({ error: "Authentication required." }, 401);
 
       const { maintenanceRequestId, forceRetry = false } = await request.json();
-      if (!maintenanceRequestId) return jsonResponse({ error: "maintenanceRequestId is required." }, 400);
+      if (typeof maintenanceRequestId !== "string" || !/^[a-f0-9-]{36}$/i.test(maintenanceRequestId) || typeof forceRetry !== "boolean") {
+        return jsonResponse({ error: "A valid maintenanceRequestId and boolean forceRetry are required." }, 400);
+      }
 
-      // This query is the authorization gate. The service-role client is used only
-      // after caller RLS has confirmed access to this exact request.
-      const { data: authorizedRequest, error: accessError } = await requester
-        .from("maintenance_requests")
-        .select("id")
-        .eq("id", maintenanceRequestId)
-        .single();
-      if (accessError || !authorizedRequest) return jsonResponse({ error: "You do not have access to this request." }, 403);
-
-      const result = await processMaintenanceRequest({
+      const result = await withMaintenanceProcessingLease(requester, maintenanceRequestId, forceRetry, () => processMaintenanceRequest({
         service,
+        requester,
         maintenanceRequestId,
         forceRetry: Boolean(forceRetry),
         openAiApiKey,
         openAiModel,
         transcriptionModel,
-      });
+        signal: processingSignal,
+      }));
       return jsonResponse(result);
     } catch (error) {
-      return jsonResponse({ error: error instanceof Error ? error.message : "Maintenance processing failed." }, 500);
+      return jsonResponse({ error: error instanceof Error ? error.message : "Maintenance processing failed." }, (error as { status?: number })?.status || 500);
     }
   },
 };
 
 async function processMaintenanceRequest({
   service,
+  requester,
   maintenanceRequestId,
   forceRetry,
   openAiApiKey,
   openAiModel,
   transcriptionModel,
+  signal,
 }: {
   service: SupabaseClient;
+  requester: SupabaseClient;
   maintenanceRequestId: string;
   forceRetry: boolean;
   openAiApiKey: string;
   openAiModel: string;
   transcriptionModel: string;
+  signal: AbortSignal;
 }) {
+  const aiFetch: typeof fetch = (input, init) => deadlineFetch(AbortSignal.any([signal, AbortSignal.timeout(AI_CALL_TIMEOUT_MS)]))(input, init);
   let request = await getRequest(service, maintenanceRequestId);
   if (forceRetry) request = await beginForcedReanalysis(service, request);
-  await transcribePendingAudio({ service, request, openAiApiKey, transcriptionModel });
+  await transcribePendingAudio({ service, request, openAiApiKey, transcriptionModel, aiFetch });
   const refreshed = await getRequest(service, maintenanceRequestId);
 
   if (refreshed.source_type === "admin-walkthrough" && !refreshed.parent_request_id) {
-    return processWalkthrough({ service, request: refreshed, forceRetry, openAiApiKey, openAiModel });
+    return processWalkthrough({ service, requester, request: refreshed, forceRetry, openAiApiKey, openAiModel, aiFetch });
   }
-  return processSingleRequest({ service, request: refreshed, forceRetry, openAiApiKey, openAiModel });
+  return processSingleRequest({ service, request: refreshed, forceRetry, openAiApiKey, openAiModel, aiFetch });
 }
 
 async function beginForcedReanalysis(service: SupabaseClient, request: RequestRow) {
@@ -171,12 +174,14 @@ async function processSingleRequest({
   forceRetry,
   openAiApiKey,
   openAiModel,
+  aiFetch,
 }: {
   service: SupabaseClient;
   request: RequestRow;
   forceRetry: boolean;
   openAiApiKey: string;
   openAiModel: string;
+  aiFetch: typeof fetch;
 }) {
   const snapshot = await getInputSnapshot(service, request, true);
   const sourceHash = await hashSnapshot(snapshot);
@@ -195,6 +200,7 @@ async function processSingleRequest({
       system: MAINTENANCE_ANALYSIS_INSTRUCTIONS,
       user: formatRequestInput(request, snapshot),
       sanitize: sanitizeRequestAnalysis,
+      aiFetch,
     });
     const guardedDraft = applyKnownAmbiguityGuardrails(draft, request, snapshot);
     const proposedItems = limitReviewMaterialSuggestions(guardedDraft.proposed_items);
@@ -214,16 +220,20 @@ async function processSingleRequest({
 
 async function processWalkthrough({
   service,
+  requester,
   request,
   forceRetry,
   openAiApiKey,
   openAiModel,
+  aiFetch,
 }: {
   service: SupabaseClient;
+  requester: SupabaseClient;
   request: RequestRow;
   forceRetry: boolean;
   openAiApiKey: string;
   openAiModel: string;
+  aiFetch: typeof fetch;
 }) {
   const snapshot = await getInputSnapshot(service, request, false);
   const sourceHash = await hashSnapshot(snapshot);
@@ -244,6 +254,7 @@ async function processWalkthrough({
         system: MAINTENANCE_INTAKE_INSTRUCTIONS,
         user: formatWalkthroughInput(request, snapshot),
         sanitize: sanitizeIntake,
+        aiFetch,
       });
       await completeAnalysis(service, request, claim.analysis.id, output, snapshot, openAiModel);
     } catch (error) {
@@ -257,7 +268,7 @@ async function processWalkthrough({
   const childResults = [];
   for (const childId of childIds) {
     const child = await getRequest(service, childId);
-    childResults.push(await processSingleRequest({ service, request: child, forceRetry, openAiApiKey, openAiModel }));
+    childResults.push(await withMaintenanceProcessingLease(requester, childId, false, () => processSingleRequest({ service, request: child, forceRetry: false, openAiApiKey, openAiModel, aiFetch })));
   }
   return {
     status: "completed",
@@ -451,11 +462,13 @@ async function transcribePendingAudio({
   request,
   openAiApiKey,
   transcriptionModel,
+  aiFetch,
 }: {
   service: SupabaseClient;
   request: RequestRow;
   openAiApiKey: string;
   transcriptionModel: string;
+  aiFetch: typeof fetch;
 }) {
   const snapshot = await getInputSnapshot(service, request, false);
   const byEntry = new Map(snapshot.attachments.filter((attachment) => attachment.kind === "audio" && attachment.entry_id)
@@ -472,6 +485,7 @@ async function transcribePendingAudio({
       model: transcriptionModel,
       fileName: attachment.file_name,
       audioBlob,
+      aiFetch,
     });
     const { error: updateError } = await service
       .from("maintenance_request_entries")
@@ -486,7 +500,7 @@ async function claimAnalysis(
   request: RequestRow,
   analysisKind: "request" | "intake",
   sourceHash: string,
-  forceRetry: boolean,
+  _forceRetry: boolean,
 ): Promise<{ analysis: AnalysisRow; claimed: boolean }> {
   const { data: existing, error: existingError } = await service
     .from("maintenance_analyses")
@@ -498,7 +512,8 @@ async function claimAnalysis(
   if (existingError) throw existingError;
 
   if (existing?.processing_status === "completed") return { analysis: existing as AnalysisRow, claimed: false };
-  if (existing?.processing_status === "processing" && !forceRetry) return { analysis: existing as AnalysisRow, claimed: false };
+  // The caller owns the request lease. A processing row here belongs to a
+  // previous interrupted attempt and can now be reclaimed safely.
   if (existing) {
     const { data, error } = await service
       .from("maintenance_analyses")
@@ -742,6 +757,7 @@ async function requestStructuredOutput<T>({
   system,
   user,
   sanitize,
+  aiFetch,
 }: {
   apiKey: string;
   model: string;
@@ -750,8 +766,9 @@ async function requestStructuredOutput<T>({
   system: string;
   user: string;
   sanitize: (value: unknown) => T;
+  aiFetch: typeof fetch;
 }) {
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const response = await aiFetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -766,17 +783,18 @@ async function requestStructuredOutput<T>({
   return sanitize(JSON.parse(outputText));
 }
 
-async function transcribeAudio({ apiKey, model, fileName, audioBlob }: {
+async function transcribeAudio({ apiKey, model, fileName, audioBlob, aiFetch }: {
   apiKey: string;
   model: string;
   fileName: string;
   audioBlob: Blob;
+  aiFetch: typeof fetch;
 }) {
   const body = new FormData();
   body.append("model", model);
   body.append("file", audioBlob, fileName || "maintenance-message.webm");
   body.append("response_format", "json");
-  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+  const response = await aiFetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}` },
     body,

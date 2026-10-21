@@ -1,3 +1,4 @@
+import { AI_CALL_TIMEOUT_MS } from "../_shared/maintenance-processing.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.111.0";
 
 type TaskDraftItem = {
@@ -197,6 +198,7 @@ async function transcribeAudio({ apiKey, model, fileName, audioBlob }: {
 
   const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
+    signal: AbortSignal.timeout(AI_CALL_TIMEOUT_MS),
     headers: {
       Authorization: `Bearer ${apiKey}`,
     },
@@ -223,6 +225,7 @@ async function draftItems({ apiKey, model, propertyName, unitName, transcript }:
 }) {
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
+    signal: AbortSignal.timeout(AI_CALL_TIMEOUT_MS),
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",

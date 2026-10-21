@@ -2,6 +2,7 @@ export const WORKSPACE_NAME = "Tipton Rentals";
 
 export const INITIAL_PROPERTIES = [
   { name: "451 Park", units: ["UP", "DOWN"] },
+  { name: "447 Park", units: ["UP", "DOWN"] },
   { name: "441 Park", units: ["UP", "DOWN"] },
   { name: "1065/1067 Hudson", units: ["1065", "1067"] },
   { name: "4 Vine", units: ["Main Unit"] },

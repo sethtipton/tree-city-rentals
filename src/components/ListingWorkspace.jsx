@@ -1,0 +1,369 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDown, CircleAlert, ExternalLink, Home, Landmark, LoaderCircle, SlidersHorizontal, Sparkles } from "lucide-react";
+import { createListingPreview, groupListings } from "../lib/listings";
+import { ListingDetail, PublicPropertyPage } from "./PublicListings";
+import { ListingImages } from "./ListingImages";
+import { ListingAvailabilityWarnings } from "./ListingAvailabilityWarnings";
+
+export function ListingWorkspace({ property, units, selectedUnit, view, busy, onSaveProperty, onSaveUnit, onSuggestListingField, animated = false }) {
+  const propertyUnits = units.filter((unit) => unit.property_id === property.id);
+  const displayUnit = selectedUnit || (propertyUnits.length === 1 ? propertyUnits[0] : null);
+  const listings = propertyUnits.map((unit) => createListingPreview(property, unit));
+  const displayListing = displayUnit
+    ? listings.find((listing) => listing.unit_id === displayUnit.id)
+    : null;
+
+  return (
+    <section className={`listing-workspace${animated ? " listing-workspace-enter" : ""}`} aria-label="Public listing workspace">
+      <ListingAvailabilityWarnings units={selectedUnit ? [selectedUnit] : propertyUnits} />
+      {view === "edit" ? (
+        <ListingEditor
+          property={property}
+          units={selectedUnit ? [selectedUnit] : propertyUnits}
+          busy={busy}
+          onSaveProperty={onSaveProperty}
+          onSaveUnit={onSaveUnit}
+          onSuggestListingField={onSuggestListingField}
+        />
+      ) : displayListing ? (
+        <ListingDetail listing={displayListing} preview />
+      ) : (
+        <PublicPropertyPage property={groupListings(listings)[0]} preview />
+      )}
+    </section>
+  );
+}
+
+export function ListingViewSwitch({ view, onViewChange }) {
+  return (
+    <div className="listing-view-switch" role="group" aria-label="Property view">
+      <button className={view === "tasks" ? "active" : ""} type="button" onClick={() => onViewChange("tasks")} aria-pressed={view === "tasks"}>
+        <SlidersHorizontal size={17} aria-hidden="true" /> Tasks
+      </button>
+      <button className={view === "listing" ? "active" : ""} type="button" onClick={() => onViewChange("listing")} aria-pressed={view === "listing"}>
+        <Home size={17} aria-hidden="true" /> Listing
+      </button>
+      <button className={view === "edit" ? "active" : ""} type="button" onClick={() => onViewChange("edit")} aria-pressed={view === "edit"}>
+        <Sparkles size={17} aria-hidden="true" /> Edit Listing
+      </button>
+    </div>
+  );
+}
+
+function ListingEditor({ property, units, busy, onSaveProperty, onSaveUnit, onSuggestListingField }) {
+  return (
+    <section className="listing-editor" aria-label="Edit listing">
+      <PropertyEditor key={property.id} property={property} onSave={onSaveProperty} />
+      {units.map((unit) => <UnitEditor key={unit.id} unit={unit} busy={busy} onSave={onSaveUnit} onSuggestListingField={onSuggestListingField} />)}
+    </section>
+  );
+}
+
+function PropertyEditor({ property, onSave }) {
+  const [form, setForm] = useState(toPropertyForm(property));
+  const autosave = useListingAutosave(onSave);
+
+  function change(event) {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+    autosave.queue(name, value);
+  }
+
+  return (
+    <form className="listing-edit-panel" onSubmit={(event) => event.preventDefault()}>
+      <div className="listing-edit-heading"><h3>Shared property information</h3><AutosaveStatus status={autosave.status} onRetry={autosave.retry} /></div>
+      <details>
+        <summary><span>Property basics</span><ChevronDown size={18} aria-hidden="true" /></summary>
+        <div className="listing-edit-fields">
+          <Field label="Public property name" name="public_name" value={form.public_name} onChange={change} onBlur={autosave.flush} />
+          <Field label="Property type" name="property_type" value={form.property_type} onChange={change} onBlur={autosave.flush} placeholder="Apartment, duplex, house..." />
+        </div>
+      </details>
+      <details>
+        <summary><span>Location</span><ChevronDown size={18} aria-hidden="true" /></summary>
+        <div className="listing-edit-fields">
+          <Field label="Street address" name="street_address" value={form.street_address} onChange={change} onBlur={autosave.flush} />
+          <Field label="City" name="city" value={form.city} onChange={change} onBlur={autosave.flush} />
+          <Field label="State" name="state" value={form.state} onChange={change} onBlur={autosave.flush} />
+          <Field label="ZIP code" name="postal_code" value={form.postal_code} onChange={change} onBlur={autosave.flush} />
+          <Field label="Neighborhood or area" name="neighborhood" value={form.neighborhood} onChange={change} onBlur={autosave.flush} />
+        </div>
+      </details>
+      <details>
+        <summary><span>Property records</span><ChevronDown size={18} aria-hidden="true" /></summary>
+        <div className="listing-edit-fields">
+          <div className="auditor-url-control">
+            <Field label="Auditor parcel URL" name="auditor_parcel_url" type="url" value={form.auditor_parcel_url} onChange={change} onBlur={autosave.flush} />
+            {form.auditor_parcel_url && (
+              <a className="secondary-link auditor-parcel-link" href={form.auditor_parcel_url} target="_blank" rel="noreferrer">
+                <Landmark size={17} aria-hidden="true" />
+                <span>Open Auditor parcel</span>
+                <ExternalLink size={15} aria-hidden="true" />
+              </a>
+            )}
+          </div>
+        </div>
+      </details>
+    </form>
+  );
+}
+
+function UnitEditor({ unit, busy, onSave, onSuggestListingField }) {
+  const [form, setForm] = useState(toUnitForm(unit));
+  const [suggestingField, setSuggestingField] = useState("");
+  const [suggestionErrorField, setSuggestionErrorField] = useState("");
+  const autosave = useListingAutosave((patch) => onSave(unit.id, patch));
+
+  function change(event) {
+    const { name, value, checked, type } = event.target;
+    const nextValue = type === "checkbox" ? checked : value;
+    setForm((current) => ({ ...current, [name]: nextValue }));
+    autosave.queue(name, toUnitPatch(name, nextValue), { immediate: type === "checkbox" || type === "date" || event.target.tagName === "SELECT" });
+  }
+
+  async function suggest(field) {
+    if (!onSuggestListingField || suggestingField || busy) return;
+
+    setSuggestionErrorField("");
+    setSuggestingField(field);
+    try {
+      const result = await onSuggestListingField(unit.id, field);
+      const suggestion = typeof result?.suggestion === "string" ? result.suggestion.trim() : "";
+      if (suggestion) {
+        setForm((current) => ({ ...current, [field]: suggestion }));
+        autosave.queue(field, toUnitPatch(field, suggestion), { immediate: true });
+      }
+    } catch {
+      setSuggestionErrorField(field);
+    } finally {
+      setSuggestingField("");
+    }
+  }
+
+  return (
+    <form className="listing-edit-panel" onSubmit={(event) => event.preventDefault()}>
+      <div className="listing-edit-heading"><h3>{unit.name} listing</h3><AutosaveStatus status={autosave.status} onRetry={autosave.retry} /></div>
+      <details>
+        <summary><span>Publishing and address</span><ChevronDown size={18} aria-hidden="true" /></summary>
+        <div className="listing-edit-fields">
+          <label className="listing-publish-toggle"><input type="checkbox" name="listing_published" checked={form.listing_published} onChange={change} /> <span>Publish this listing</span></label>
+          <SelectField label="Availability" name="listing_status" value={form.listing_status} onChange={change} options={LISTING_STATUS_OPTIONS} />
+          <SuggestionField label="Listing headline" name="listing_headline" value={form.listing_headline} onChange={change} onBlur={autosave.flush} onSuggest={() => suggest("listing_headline")} busy={suggestingField === "listing_headline"} error={suggestionErrorField === "listing_headline"} />
+          <Field label="Unit number" name="unit_number" value={form.unit_number} onChange={change} onBlur={autosave.flush} />
+          <SelectField label="Address visibility" name="address_visibility" value={form.address_visibility} onChange={change} options={ADDRESS_VISIBILITY_OPTIONS} />
+        </div>
+        <p className="listing-editor-note">Only published Available and Coming soon listings appear publicly.</p>
+      </details>
+      <details>
+        <summary><span>Rental details</span><ChevronDown size={18} aria-hidden="true" /></summary>
+        <div className="listing-edit-fields">
+          <Field label="Monthly rent" name="monthly_rent" type="number" min="0" inputMode="numeric" value={form.monthly_rent} onChange={change} onBlur={autosave.flush} />
+          <SelectField label="Rent display type" name="rent_display_type" value={form.rent_display_type} onChange={change} options={RENT_DISPLAY_OPTIONS} />
+          <Field label="Available date" name="available_date" type="date" value={form.available_date} onChange={change} onBlur={autosave.flush} />
+          <Field label="Lease term" name="lease_term" value={form.lease_term} onChange={change} onBlur={autosave.flush} placeholder="12 months" />
+          <Field label="Bedrooms" name="bedrooms" type="number" min="0" step="0.5" inputMode="decimal" value={form.bedrooms} onChange={change} onBlur={autosave.flush} />
+          <Field label="Full bathrooms" name="full_bathrooms" type="number" min="0" step="0.5" inputMode="decimal" value={form.full_bathrooms} onChange={change} onBlur={autosave.flush} />
+          <Field label="Half bathrooms" name="half_bathrooms" type="number" min="0" step="0.5" inputMode="decimal" value={form.half_bathrooms} onChange={change} onBlur={autosave.flush} />
+          <Field label="Interior square footage" name="interior_square_feet" type="number" min="1" inputMode="numeric" value={form.interior_square_feet} onChange={change} onBlur={autosave.flush} />
+        </div>
+      </details>
+      <details>
+        <summary><span>Description and amenities</span><ChevronDown size={18} aria-hidden="true" /></summary>
+        <div className="listing-edit-fields">
+          <SuggestionField label="Public listing description" name="listing_description" value={form.listing_description} onChange={change} onBlur={autosave.flush} onSuggest={() => suggest("listing_description")} busy={suggestingField === "listing_description"} error={suggestionErrorField === "listing_description"} multiline rows="5" />
+          <SuggestionField label="Amenities" hint="one per line" name="amenities" value={form.amenities} onChange={change} onBlur={autosave.flush} onSuggest={() => suggest("amenities")} busy={suggestingField === "amenities"} error={suggestionErrorField === "amenities"} multiline rows="4" />
+        </div>
+      </details>
+      <ListingImages unit={unit} />
+    </form>
+  );
+}
+
+function Field({ label, name, value, onChange, onBlur, type = "text", ...inputProps }) {
+  return <label className="form-field"><span>{label}</span><input name={name} type={type} value={value} onChange={onChange} onBlur={onBlur} {...inputProps} /></label>;
+}
+
+function SuggestionField({ label, hint, name, value, onChange, onBlur, onSuggest, busy, error, multiline = false, ...inputProps }) {
+  const fieldId = `listing-${name}`;
+  const state = busy ? "generating" : error ? "error" : "idle";
+  const buttonLabel = state === "generating" ? "Generating" : state === "error" ? "Try again" : "Generate";
+
+  return (
+    <div className="form-field full-width suggestion-field">
+      <div className="suggestion-field-label">
+        <label htmlFor={fieldId}>{label}{hint && <> <span className="optional-label">{hint}</span></>}</label>
+        <button
+          className={`field-suggestion-button ai is-${state}`}
+          type="button"
+          onClick={onSuggest}
+          disabled={busy}
+          aria-label={state === "generating" ? `Generating ${label}` : error ? `Retry AI suggestion for ${label}` : `Generate ${label} with AI`}
+          title={state === "generating" ? `Generating ${label}` : error ? `Retry AI suggestion for ${label}` : `Generate ${label} with AI`}
+        >
+          {busy ? <LoaderCircle className="field-suggestion-spinner" size={16} aria-hidden="true" /> : error ? <CircleAlert size={16} aria-hidden="true" /> : <Sparkles size={16} aria-hidden="true" />}
+          <span>{buttonLabel}</span>
+        </button>
+        {error && <span className="field-suggestion-error" role="alert">Could not generate. Try again.</span>}
+      </div>
+      {multiline ? (
+        <textarea id={fieldId} name={name} value={value} onChange={onChange} onBlur={onBlur} {...inputProps} />
+      ) : (
+        <input id={fieldId} name={name} value={value} onChange={onChange} onBlur={onBlur} {...inputProps} />
+      )}
+    </div>
+  );
+}
+
+function SelectField({ label, name, value, onChange, options }) {
+  return <label className="form-field"><span>{label}</span><select name={name} value={value} onChange={onChange}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
+}
+
+function AutosaveStatus({ status, onRetry }) {
+  if (status === "idle") return null;
+  const label = status === "saving" ? "Saving..." : status === "error" ? "Could not save" : "Saved";
+  return (
+    <span className={`listing-autosave-status is-${status}`}>
+      <span role="status">{label}</span>
+      {status === "error" && <button type="button" onClick={onRetry}>Retry</button>}
+    </span>
+  );
+}
+
+function useListingAutosave(onSave) {
+  const [status, setStatus] = useState("idle");
+  const onSaveRef = useRef(onSave);
+  const timersRef = useRef(new Map());
+  const queueRef = useRef(Promise.resolve());
+  const pendingSavesRef = useRef(0);
+  const failedPatchesRef = useRef(new Map());
+
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
+  const save = useCallback((patch) => {
+    const fieldName = Object.keys(patch)[0];
+    pendingSavesRef.current += 1;
+    setStatus("saving");
+    const runSave = async () => {
+      try {
+        await onSaveRef.current(patch);
+        pendingSavesRef.current -= 1;
+        failedPatchesRef.current.delete(fieldName);
+        setStatus(pendingSavesRef.current > 0 ? "saving" : failedPatchesRef.current.size > 0 ? "error" : "saved");
+      } catch {
+        pendingSavesRef.current -= 1;
+        failedPatchesRef.current.set(fieldName, patch);
+        setStatus("error");
+      }
+    };
+    queueRef.current = queueRef.current.then(runSave, runSave);
+  }, []);
+
+  const flush = useCallback((event) => {
+    const { name } = event.target;
+    const pending = timersRef.current.get(name);
+    if (!pending) return;
+    window.clearTimeout(pending.timer);
+    timersRef.current.delete(name);
+    save(pending.patch);
+  }, [save]);
+
+  const queue = useCallback((name, value, { immediate = false } = {}) => {
+    const pending = timersRef.current.get(name);
+    if (pending) window.clearTimeout(pending.timer);
+    const patch = { [name]: value };
+    if (immediate) {
+      timersRef.current.delete(name);
+      save(patch);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      timersRef.current.delete(name);
+      save(patch);
+    }, 700);
+    timersRef.current.set(name, { timer, patch });
+  }, [save]);
+
+  const retry = useCallback(() => {
+    [...failedPatchesRef.current.values()].forEach(save);
+  }, [save]);
+
+  useEffect(() => () => {
+    timersRef.current.forEach(({ timer, patch }) => {
+      window.clearTimeout(timer);
+      save(patch);
+    });
+    timersRef.current.clear();
+  }, [save]);
+
+  return { status, queue, flush, retry };
+}
+
+function toUnitPatch(name, value) {
+  if (["monthly_rent", "interior_square_feet"].includes(name)) return toOptionalInteger(value);
+  if (["bedrooms", "full_bathrooms", "half_bathrooms"].includes(name)) return toOptionalNumber(value);
+  if (name === "available_date") return value || null;
+  if (name === "amenities") return value.split("\n").map((item) => item.trim()).filter(Boolean);
+  return value;
+}
+
+function toPropertyForm(property) {
+  return {
+    public_name: property.public_name || "",
+    property_type: property.property_type || "",
+    street_address: property.street_address || "",
+    city: property.city || "",
+    state: property.state || "",
+    postal_code: property.postal_code || "",
+    neighborhood: property.neighborhood || "",
+    auditor_parcel_url: property.auditor_parcel_url || "",
+  };
+}
+
+function toUnitForm(unit) {
+  return {
+    listing_published: Boolean(unit.listing_published),
+    listing_status: unit.listing_status || "off-market",
+    listing_headline: unit.listing_headline || "",
+    address_visibility: unit.address_visibility || "city",
+    unit_number: unit.unit_number || "",
+    monthly_rent: unit.monthly_rent ?? "",
+    rent_display_type: unit.rent_display_type || "exact",
+    available_date: unit.available_date || "",
+    lease_term: unit.lease_term || "",
+    bedrooms: unit.bedrooms ?? "",
+    full_bathrooms: unit.full_bathrooms ?? "",
+    half_bathrooms: unit.half_bathrooms ?? "",
+    interior_square_feet: unit.interior_square_feet ?? "",
+    listing_description: unit.listing_description || "",
+    amenities: (unit.amenities || []).join("\n"),
+  };
+}
+
+function toOptionalInteger(value) {
+  return value === "" ? null : Number.parseInt(value, 10);
+}
+
+function toOptionalNumber(value) {
+  return value === "" ? null : Number(value);
+}
+
+const LISTING_STATUS_OPTIONS = [
+  { value: "available", label: "Available" },
+  { value: "coming-soon", label: "Coming soon" },
+  { value: "occupied", label: "Occupied" },
+  { value: "off-market", label: "Off market" },
+];
+
+const ADDRESS_VISIBILITY_OPTIONS = [
+  { value: "full", label: "Full address" },
+  { value: "approximate", label: "Approximate location" },
+  { value: "city", label: "City only" },
+];
+
+const RENT_DISPLAY_OPTIONS = [
+  { value: "exact", label: "Exact amount" },
+  { value: "starting-at", label: "Starting at" },
+  { value: "contact", label: "Contact for rent" },
+];

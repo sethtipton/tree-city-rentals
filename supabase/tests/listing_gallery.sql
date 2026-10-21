@@ -1,5 +1,5 @@
 begin;
-select set_config('test.unit_id',(select id::text from public.units limit 1),true);
+
 update public.units set listing_published=true,listing_status='available' where id=current_setting('test.unit_id')::uuid;
 insert into public.listing_images(id,unit_id,original_name,label,ready,sort_order)
 values('bbbbbbbb-1111-4111-8111-111111111111',current_setting('test.unit_id')::uuid,'test.jpg','Kitchen',true,0),

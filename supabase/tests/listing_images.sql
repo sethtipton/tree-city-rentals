@@ -1,6 +1,6 @@
 begin;
 insert into public.listing_images(id,unit_id,original_name)
-select 'aaaaaaaa-1111-4111-8111-111111111111',id,'RLS test' from public.units limit 1;
+select 'aaaaaaaa-1111-4111-8111-111111111111',id,'RLS test' from public.units where id=current_setting('test.unit')::uuid;
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000001","email":"unassigned-listing-test@example.invalid","role":"authenticated"}',true);
 do $$

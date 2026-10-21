@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, FileAudio, Mic, Send, Wrench, X } from "lucide-react";
+import { useSignedAttachmentUrls } from "../hooks/useSignedAttachmentUrls";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
 import {
   REQUEST_STATUS_LABELS,
@@ -47,7 +48,7 @@ export function TenantMaintenanceDialog({ open, onClose, user, tenantUnits, prev
     return () => dialog.removeEventListener("click", closeOnBackdrop);
   }, [open]);
 
-  async function handleSubmit({ description, audioFile, photoFiles }) {
+  async function handleSubmit({ description, audioFile, photoFiles, submission }) {
     if (!selectedUnit) return;
     setBusy(true);
     setMessage("");
@@ -61,18 +62,21 @@ export function TenantMaintenanceDialog({ open, onClose, user, tenantUnits, prev
         description,
         audioFile,
         photoFiles,
+        submission,
         sourceType: preview ? "admin-test" : undefined,
         visibility: "tenant",
       });
       setMessage(preview ? "Test request received. It was saved to the selected unit’s case files." : "Request received. We’ll review it and keep you updated.");
+      return true;
     } catch (error) {
       setMessage(error.message);
+      return false;
     } finally {
       setBusy(false);
     }
   }
 
-  return <dialog ref={dialogRef} className="tenant-maintenance-dialog" closedby="any" aria-labelledby="tenant-dialog-title" onClose={onClose}><header><div><p className="eyebrow">Resident support</p><h2 id="tenant-dialog-title">Report a maintenance problem</h2><p>We’ll send this directly to the property team for your rental home.</p></div><button className="dialog-close" type="button" onClick={() => dialogRef.current?.close()}><X size={19} aria-hidden="true" /><span className="visually-hidden">Close maintenance request form</span></button></header>{tenantUnits.length > 1 ? <fieldset className="tenant-dialog-unit-picker"><legend>Rental home</legend>{tenantUnits.map((unit) => <label key={unit.membership_id}><input type="radio" name="dialog-tenant-unit" value={unit.membership_id} checked={unit.membership_id === selectedMembershipId} onChange={() => setSelectedMembershipId(unit.membership_id)} /><span>{unit.property_name} · {unit.unit_name}</span></label>)}</fieldset> : selectedUnit ? <p className="tenant-dialog-scope">For {selectedUnit.property_name} · {selectedUnit.unit_name}</p> : null}{selectedUnit && <TenantRequestComposer title="Describe the issue" propertyId={selectedUnit.property_id} unitId={selectedUnit.unit_id} busy={busy} onSubmit={handleSubmit} submitLabel="Submit request" />}{message && <p className="message" role="status">{message}</p>}<p className="tenant-dialog-route-note">You can also visit the maintenance-request link provided by your property team.</p></dialog>;
+  return <dialog ref={dialogRef} className="tenant-maintenance-dialog" closedby="any" aria-labelledby="tenant-dialog-title" onClose={onClose}><header><div><p className="eyebrow">Resident support</p><h2 id="tenant-dialog-title">Report a maintenance problem</h2><p>We’ll send this directly to the property team for your rental home.</p></div><button className="dialog-close" type="button" onClick={() => dialogRef.current?.close()}><X size={19} aria-hidden="true" /><span className="visually-hidden">Close maintenance request form</span></button></header>{tenantUnits.length > 1 ? <fieldset className="tenant-dialog-unit-picker"><legend>Rental home</legend>{tenantUnits.map((unit) => <label key={unit.membership_id}><input type="radio" name="dialog-tenant-unit" value={unit.membership_id} checked={unit.membership_id === selectedMembershipId} onChange={() => setSelectedMembershipId(unit.membership_id)} /><span>{unit.property_name} · {unit.unit_name}</span></label>)}</fieldset> : selectedUnit ? <p className="tenant-dialog-scope">For {selectedUnit.property_name} · {selectedUnit.unit_name}</p> : null}{selectedUnit && <TenantRequestComposer key={selectedUnit.unit_id} title="Describe the issue" propertyId={selectedUnit.property_id} unitId={selectedUnit.unit_id} busy={busy} onSubmit={handleSubmit} submitLabel="Submit request" />}{message && <p className="message" role="status">{message}</p>}<p className="tenant-dialog-route-note">You can also visit the maintenance-request link provided by your property team.</p></dialog>;
 }
 
 export function TenantMaintenanceApp({ user, tenantUnits, preview = false, onExitPreview, onSignOut }) {
@@ -116,7 +120,7 @@ export function TenantMaintenanceApp({ user, tenantUnits, preview = false, onExi
     return () => { active = false; };
   }, [selectedRequestId]);
 
-  async function handleSubmit({ description, audioFile, photoFiles }) {
+  async function handleSubmit({ description, audioFile, photoFiles, submission }) {
     if (!selectedUnit) return;
     setBusy(true);
     try {
@@ -129,20 +133,23 @@ export function TenantMaintenanceApp({ user, tenantUnits, preview = false, onExi
         description,
         audioFile,
         photoFiles,
+        submission,
         sourceType: preview ? "admin-test" : undefined,
         visibility: "tenant",
       });
       setMessage("Request received. We’ll review it and keep you updated.");
       await refresh({ keepSelection: false });
       setSelectedRequestId(request.id);
+      return true;
     } catch (error) {
       setMessage(error.message);
+      return false;
     } finally {
       setBusy(false);
     }
   }
 
-  async function handleAddInformation({ description, audioFile, photoFiles }) {
+  async function handleAddInformation({ description, audioFile, photoFiles, submission }) {
     if (!detail?.request) return;
     setBusy(true);
     try {
@@ -152,13 +159,16 @@ export function TenantMaintenanceApp({ user, tenantUnits, preview = false, onExi
         content: description,
         audioFile,
         photoFiles,
+        submission,
         visibility: "tenant",
       });
       setMessage("Additional information sent.");
       await refresh();
       setDetail(await loadTenantMaintenanceDetail(detail.request.id));
+      return true;
     } catch (error) {
       setMessage(error.message);
+      return false;
     } finally {
       setBusy(false);
     }
@@ -189,7 +199,7 @@ export function TenantMaintenanceApp({ user, tenantUnits, preview = false, onExi
           </fieldset>
         )}
 
-        {selectedUnit && <TenantRequestComposer title="Report a maintenance problem" propertyId={selectedUnit.property_id} unitId={selectedUnit.unit_id} busy={busy} onSubmit={handleSubmit} submitLabel="Submit request" hideTitle={preview} hideDescriptionLabel={preview} />}
+        {selectedUnit && <TenantRequestComposer key={selectedUnit.unit_id} title="Report a maintenance problem" propertyId={selectedUnit.property_id} unitId={selectedUnit.unit_id} busy={busy} onSubmit={handleSubmit} submitLabel="Submit request" hideTitle={preview} hideDescriptionLabel={preview} />}
 
         <section className="tenant-request-area" aria-labelledby="my-requests-title">
           <div className="tenant-request-list">
@@ -216,15 +226,7 @@ export function TenantMaintenanceApp({ user, tenantUnits, preview = false, onExi
 }
 
 function TenantCaseFile({ detail, busy, onAddInformation, message, emptyMessage }) {
-  const [urls, setUrls] = useState({});
-  useEffect(() => {
-    const attachments = detail?.attachments || [];
-    const missing = attachments.filter((attachment) => !urls[attachment.storage_path]);
-    if (missing.length === 0) return;
-    Promise.all(missing.map(async (attachment) => [attachment.storage_path, await getMaintenanceAttachmentUrl(attachment.storage_path)]))
-      .then((entries) => setUrls((current) => ({ ...current, ...Object.fromEntries(entries) })))
-      .catch(() => {});
-  }, [detail, urls]);
+  const urls = useSignedAttachmentUrls(detail?.attachments || [], getMaintenanceAttachmentUrl);
 
   if (!detail) return <section className="tenant-case-file tenant-case-empty"><Wrench size={24} aria-hidden="true" /><p>{emptyMessage}</p>{message && <p className="message" role="status">{message}</p>}</section>;
   const { request, entries, attachments } = detail;
@@ -244,13 +246,17 @@ function TenantCaseFile({ detail, busy, onAddInformation, message, emptyMessage 
         ))}
       </div>
       <RequestAttachmentList attachments={attachments} urls={urls} />
-      {request.status !== "resolved" && <TenantRequestComposer title="Add information" propertyId={request.property_id} unitId={request.unit_id} busy={busy} onSubmit={onAddInformation} submitLabel="Send update" compact />}
+      {request.status !== "resolved" && <TenantRequestComposer key={request.id} title="Add information" propertyId={request.property_id} unitId={request.unit_id} busy={busy} onSubmit={onAddInformation} submitLabel="Send update" compact />}
       {message && <p className="message" role="status">{message}</p>}
     </section>
   );
 }
 
 export function TenantRequestComposer({ title, propertyId, unitId, busy, onSubmit, submitLabel, compact = false, hideTitle = false, hideDescriptionLabel = false }) {
+  const submission = useRef({});
+  const [attempted, setAttempted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const submitting = useRef(false);
   const [description, setDescription] = useState("");
   const [photos, setPhotos] = useState([]);
   const { state, recordings, start, stop, removeRecording } = useAudioRecorder({ propertyId, unitId, onMessage: () => {} });
@@ -260,32 +266,47 @@ export function TenantRequestComposer({ title, propertyId, unitId, busy, onSubmi
   async function handleSubmit(event) {
     event.preventDefault();
     if (!description.trim() && !recording && photos.length === 0) return;
-    await onSubmit({ description, audioFile: recording?.file || null, photoFiles: photos });
-    setDescription("");
-    setPhotos([]);
-    if (recording) removeRecording(recording.id);
+    if (busy || submitting.current || isRecording || state === "finalizing" || state === "requesting") return;
+    submitting.current = true;
+    setAttempted(true);
+    setSubmitError("");
+    try {
+      const saved = await onSubmit({ description, audioFile: recording?.file || null, photoFiles: photos, submission: submission.current });
+      if (saved !== true) return;
+      setDescription("");
+      setPhotos([]);
+      if (recording) removeRecording(recording.id);
+      submission.current = {};
+      setAttempted(false);
+    } catch (error) {
+      setSubmitError(error.message || "Could not send. Please retry.");
+    } finally { submitting.current = false; }
   }
 
   return (
     <section className={`tenant-composer ${compact ? "compact" : ""}`} aria-label={hideTitle ? title : undefined} aria-labelledby={hideTitle ? undefined : `${title.toLowerCase().replaceAll(" ", "-")}-title`}>
       {!hideTitle && <h2 id={`${title.toLowerCase().replaceAll(" ", "-")}-title`}>{title}</h2>}
       <form onSubmit={handleSubmit}>
-        <label htmlFor={`${title}-description`}>
-          <span className={hideDescriptionLabel ? "visually-hidden" : ""}>{compact ? "What else would you like us to know?" : "Describe what’s happening"}</span>
-          <textarea id={`${title}-description`} name="description" value={description} onChange={(event) => setDescription(event.target.value)} rows={compact ? 3 : 5} maxLength="2000" placeholder="For example: the bathroom fan is suddenly very loud." />
-        </label>
-        <div className="tenant-media-actions">
-          <button type="button" className={isRecording ? "recording" : ""} onClick={isRecording ? stop : start} disabled={!propertyId}>
-            <Mic size={17} aria-hidden="true" /> {isRecording ? "Stop recording" : "Record voice message"}
-          </button>
-          <label className="tenant-upload-button" htmlFor={`${title}-photos`}>
-            <Camera size={17} aria-hidden="true" /> Add photos
-            <input id={`${title}-photos`} type="file" accept="image/*" multiple onChange={(event) => setPhotos([...event.target.files])} />
+        <fieldset disabled={busy || attempted}>
+          <label htmlFor={`${title}-description`}>
+            <span className={hideDescriptionLabel ? "visually-hidden" : ""}>{compact ? "What else would you like us to know?" : "Describe what’s happening"}</span>
+            <textarea id={`${title}-description`} name="description" value={description} onChange={(event) => setDescription(event.target.value)} rows={compact ? 3 : 5} maxLength="2000" placeholder="For example: the bathroom fan is suddenly very loud." />
           </label>
-        </div>
-        {recording && <div className="tenant-recording"><FileAudio size={17} aria-hidden="true" /><span>Voice message ready · {formatDuration(recording.durationMs)} · {formatBytes(recording.size)}</span><button type="button" onClick={() => removeRecording(recording.id)}>Remove</button></div>}
-        {photos.length > 0 && <p className="tenant-file-count">{photos.length} photo{photos.length === 1 ? "" : "s"} ready to send.</p>}
-        <button type="submit" disabled={busy}><Send size={17} aria-hidden="true" /> {busy ? "Sending…" : submitLabel}</button>
+          <div className="tenant-media-actions">
+            <button type="button" className={isRecording ? "recording" : ""} onClick={isRecording ? stop : start} disabled={!propertyId}>
+              <Mic size={17} aria-hidden="true" /> {isRecording ? "Stop recording" : "Record voice message"}
+            </button>
+            <label className="tenant-upload-button" htmlFor={`${title}-photos`}>
+              <Camera size={17} aria-hidden="true" /> Add photos
+              <input id={`${title}-photos`} type="file" accept="image/*" multiple onChange={(event) => setPhotos([...event.target.files])} />
+            </label>
+          </div>
+          {recording && <div className="tenant-recording"><FileAudio size={17} aria-hidden="true" /><span>Voice message ready · {formatDuration(recording.durationMs)} · {formatBytes(recording.size)}</span><button type="button" onClick={() => removeRecording(recording.id)}>Remove</button></div>}
+          {photos.length > 0 && <p className="tenant-file-count">{photos.length} photo{photos.length === 1 ? "" : "s"} ready to send.</p>}
+        </fieldset>
+        {attempted && !busy && <p role="status">Your details are kept here for retrying. Finish sending this request before starting another.</p>}
+        {submitError && <p role="alert">{submitError}</p>}
+        <button type="submit" disabled={busy || isRecording || state === "finalizing" || state === "requesting"}><Send size={17} aria-hidden="true" /> {busy ? "Sending…" : attempted ? "Retry request" : submitLabel}</button>
       </form>
     </section>
   );

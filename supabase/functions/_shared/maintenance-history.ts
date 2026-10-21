@@ -30,7 +30,7 @@ function tokens(value: string) {
   return new Set((value.toLowerCase().match(/[a-z0-9]{3,}/g) || []).filter((token) => !STOP_WORDS.has(token)));
 }
 
-function overlap(left: Set<string>, right: Set<string>) {
+function overlap(left: Iterable<string>, right: Set<string>) {
   return [...left].filter((token) => right.has(token));
 }
 

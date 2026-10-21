@@ -2,12 +2,13 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
-import App from "../src/App";
+import App from "../src/WorkspaceApp";
 
 const state = vi.hoisted(() => ({ items: [] }));
 vi.mock("../src/lib/supabase", () => ({ isSupabaseConfigured: true }));
 vi.mock("../src/lib/data", () => ({
   getSession: async () => ({ user: { id: "user", email: "owner@example.com" } }),
+  getAttachmentUrl: vi.fn(),
   signOut: vi.fn(),
   watchAuth: () => () => {},
   loadWorkspace: async () => ({ id: "workspace" }),
@@ -38,7 +39,7 @@ it("counts only approved shopping items while keeping completed items visible", 
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
-  await act(async () => root.render(<App />));
+  await act(async () => root.render(<App session={{ user: { id: "user", email: "owner@example.com" } }} />));
   const column = [...container.querySelectorAll(".item-column")].find((element) => element.textContent.includes("Shopping List"));
   const badge = column.querySelector(".item-column-count");
   expect(badge.textContent).toBe("1");
@@ -48,7 +49,7 @@ it("counts only approved shopping items while keeping completed items visible", 
   expect(column.textContent).toContain("done supply");
   expect(column.textContent).not.toContain("pending-review supply");
   state.items = state.items.map((item) => ({ ...item, status: "done" }));
-  await act(async () => root.render(<App />));
+  await act(async () => root.render(<App session={{ user: { id: "user", email: "owner@example.com" } }} />));
   expect(badge.textContent).toBe("0");
   expect(badge.getAttribute("aria-label")).toBe("0 approved shopping items");
   expect(column.textContent).toContain("done supply");

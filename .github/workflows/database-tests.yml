@@ -1,0 +1,26 @@
+name: Database Tests
+on:
+  workflow_call:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.111.0
+      - name: Start disposable Supabase database
+        run: supabase start -x gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      - name: Run all SQL regression suites
+        run: npm run test:db
+      - name: Stop disposable Supabase database
+        if: always()
+        run: supabase stop --no-backup

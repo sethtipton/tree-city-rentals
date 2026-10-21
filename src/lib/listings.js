@@ -39,3 +39,22 @@ function getDisplayAddress(property, unit) {
   if (unit.address_visibility === "approximate") return property.neighborhood || cityState;
   return cityState;
 }
+
+export function groupListings(listings) {
+  return Object.values(listings.reduce((groups, listing) => {
+    const key = listing.property_id;
+    if (!groups[key]) {
+      groups[key] = {
+        property_id: listing.property_id,
+        property_name: listing.property_name,
+        property_slug: listing.property_slug,
+        property_type: listing.property_type,
+        city: listing.city,
+        state: listing.state,
+        listings: [],
+      };
+    }
+    groups[key].listings.push(listing);
+    return groups;
+  }, {}));
+}

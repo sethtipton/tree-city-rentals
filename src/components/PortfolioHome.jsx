@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   ShoppingCart,
 } from "lucide-react";
+import { ListingAvailabilityWarnings } from "./ListingAvailabilityWarnings";
 import { PortfolioDrilldown } from "./PortfolioDrilldown";
 import { PropertyImage } from "./PropertyImage";
 import {
@@ -51,6 +52,7 @@ export function PortfolioHome({
 
   return (
     <div className="portfolio-home" aria-busy={busy}>
+      <ListingAvailabilityWarnings units={units.filter(unit => properties.some(property => property.id === unit.property_id))} properties={properties} />
       <div className="portfolio-workspace">
         <section className="portfolio-summary" aria-label="Portfolio work summary">
           <PortfolioMetric label="Open" value={overview.totals.openTasks} busy={busy} panel="tasks" activePanel={activePanel} onToggle={togglePanel} />

@@ -34,3 +34,7 @@ Fixed React StrictMode development effect cleanup closing the dialog immediately
 The first live cron run exposed a stale opt-in column reference in the copied recipient recheck. Applied follow-up migration `20260921110000_fix_inquiry_recipient_recheck.sql`; transactional claim/prepare/finish checks passed afterward. The scheduler then sent the controlled email on its first claimed attempt. Resend `01a0c6b9-30d4-7433-a004-b3d44d97d65b` confirmed Delivered and correct Reply-To. No email was sent to the other three admins for this synthetic inquiry.
 
 Backend publication checklist items are now complete; remaining publication is the reviewed frontend/CI commit and push. The earlier undeployed statements above describe the pre-rollout validation stage.
+
+## October 20 — separate inquiry action
+
+Public cards and detail pages show **Ask about this home** independently of the rent display. Exact, starting-at, contact, and missing prices share the existing eligibility-checked inquiry flow. Public page generation and search/sharing metadata are documented in the README's **Public listing search and sharing** section.

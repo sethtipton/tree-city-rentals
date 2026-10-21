@@ -4828,3 +4828,17 @@ ul.admin-walkthrough-steps {
 @media (pointer: coarse) {
   .task-type-choice .add-choice-option { min-height: 2.75rem; }
 }
+
+.listing-availability-warning {
+  padding: 0.85rem 1rem;
+  border: 1px solid #a67c30;
+  border-radius: 0.6rem;
+  background: #382d18;
+  color: #ffe2a1;
+}
+.tenant-composer fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 1rem; }
+
+.listing-inquiry-button { min-height: 2.75rem; white-space: normal; }
+.listing-card-contact { padding: 0 var(--space-7) var(--space-7); }
+.listing-card-contact:has(.listing-inquiry-button) { margin-block-start: var(--space-5); }
+.listing-card-contact:empty { display: none; }

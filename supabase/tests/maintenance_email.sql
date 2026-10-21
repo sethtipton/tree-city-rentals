@@ -23,12 +23,12 @@ begin
  or has_function_privilege('anon','public.claim_maintenance_email()','execute') then
  raise exception 'Email internals exposed'; end if;
  claim := public.claim_public_maintenance_submission(repeat('1',64),sid,repeat('a',64));
- if exists(select 1 from public.maintenance_email_outbox) then raise exception 'Queued before completion'; end if;
+ if exists(select 1 from public.maintenance_email_outbox where request_id=(claim->>'request_id')::uuid) then raise exception 'Queued before completion'; end if;
  perform public.finalize_public_maintenance_submission(sid,(claim->>'attempt_id')::uuid,
  '{"title":"Email fixture","description":"Tap leaking","contactEmail":"tenant@example.test"}','[]');
- if (select count(*) from public.maintenance_email_outbox) <> 1 then raise exception 'Recipient selection failed'; end if;
+ if (select count(*) from public.maintenance_email_outbox where request_id=(claim->>'request_id')::uuid) <> 1 then raise exception 'Recipient selection failed'; end if;
  update public.maintenance_public_submissions set state='completed' where id=sid;
- if (select count(*) from public.maintenance_email_outbox) <> 1 then raise exception 'Duplicate notification'; end if;
+ if (select count(*) from public.maintenance_email_outbox where request_id=(claim->>'request_id')::uuid) <> 1 then raise exception 'Duplicate notification'; end if;
  delivery := public.claim_maintenance_email();
  if delivery->>'recipient_email' <> 'enabled@example.test' or delivery->'snapshot'->>'description' <> 'Tap leaking' then raise exception 'Snapshot incorrect'; end if;
  if public.claim_maintenance_email() is not null then raise exception 'Lease not respected'; end if;
@@ -39,18 +39,18 @@ begin
  if payload <> again then raise exception 'Retry payload changed'; end if;
  perform public.finish_maintenance_email((delivery->>'id')::uuid,(delivery->>'attempt_id')::uuid,null,'provider_429',true);
  if public.claim_maintenance_email() is not null then raise exception 'Backoff ignored'; end if;
- update public.maintenance_email_outbox set next_attempt_at=now()-interval '1 minute';
+ update public.maintenance_email_outbox set next_attempt_at=now()-interval '1 minute' where request_id=(claim->>'request_id')::uuid;
  again := public.claim_maintenance_email();
  if public.finish_maintenance_email((delivery->>'id')::uuid,(delivery->>'attempt_id')::uuid,'stale') then raise exception 'Stale worker accepted'; end if;
  perform public.finish_maintenance_email((again->>'id')::uuid,(again->>'attempt_id')::uuid,'fixture-provider-id');
  if public.claim_maintenance_email() is not null then raise exception 'Sent email reclaimed'; end if;
- update public.maintenance_email_outbox set status='queued', next_attempt_at=now(),first_attempt_at=now()-interval '24 hours';
+ update public.maintenance_email_outbox set status='queued', next_attempt_at=now(),first_attempt_at=now()-interval '24 hours' where request_id=(claim->>'request_id')::uuid;
  perform public.claim_maintenance_email();
- if (select status from public.maintenance_email_outbox) <> 'failed' then raise exception 'Expired idempotency window retried'; end if;
- update public.maintenance_email_outbox set status='queued',first_attempt_at=null,attempts=0;
+ if (select status from public.maintenance_email_outbox where request_id=(claim->>'request_id')::uuid) <> 'failed' then raise exception 'Expired idempotency window retried'; end if;
+ update public.maintenance_email_outbox set status='queued',first_attempt_at=null,attempts=0 where request_id=(claim->>'request_id')::uuid;
  update public.property_members set maintenance_email_enabled=false where email='enabled@example.test';
  perform public.claim_maintenance_email();
- if (select status from public.maintenance_email_outbox) <> 'cancelled' then raise exception 'Revoked recipient retained'; end if;
+ if (select status from public.maintenance_email_outbox where request_id=(claim->>'request_id')::uuid) <> 'cancelled' then raise exception 'Revoked recipient retained'; end if;
 end $$;
 select 'Email recipient, snapshot, deduplication, lease, payload, backoff, stale worker, expiry and revocation checks passed' as result;
 rollback;

@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "postbuild": "node scripts/create-pages-fallbacks.mjs",
+    "postbuild": "vite build --ssr src/prerender.jsx --outDir node_modules/.cache/tree-city-prerender --emptyOutDir && node scripts/create-pages-fallbacks.mjs",
     "lint": "oxlint",
     "test": "vitest run",
+    "test:db": "node scripts/test-maintenance-db.mjs --local",
     "preview": "vite preview"
   },
   "dependencies": {
