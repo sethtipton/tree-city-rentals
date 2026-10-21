@@ -509,6 +509,10 @@
   }
 
   .public-listing-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    position: relative;
+    isolation: isolate;
     min-width: 0;
     overflow: hidden;
     border-radius: var(--radius-panel);
@@ -519,16 +523,25 @@
     }
 
     & > a {
-      display: grid;
-      /*grid-template-columns: clamp(6.5rem, 28vw, 9.5rem) minmax(0, 1fr);
-      grid-template-columns: clamp(6.5rem, 22vw, 20rem) minmax(0, 1fr);*/
-      grid-template-columns: 1fr 1fr;
-
-      min-height: 100%;
-      overflow: clip;
       color: var(--color-text);
       text-decoration: none;
+
+      /* Keep the image clickable without nesting the inquiry button in a link. */
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        border-radius: var(--radius-panel);
+      }
+
+      &:focus-visible::after {
+        outline: 3px solid var(--color-focus);
+        outline-offset: -3px;
+      }
     }
+
+    & .preview-card-note { grid-column: 1 / -1; }
 
     & h2 {
       font-size: var(--font-size-xl);
@@ -547,7 +560,7 @@
 
   .public-listing-card-media {
     display: grid;
-    min-height: 100%;
+    min-height: 8rem;
     place-items: center;
     position: relative;
     overflow: hidden;
@@ -4779,8 +4792,6 @@ ul.admin-walkthrough-steps {
 .listing-inquiry-dialog input,.listing-inquiry-dialog textarea { width: 100%; min-width: 0; }
 .listing-inquiry-dialog .inquiry-trap { position: absolute; left: -10000px; }
 .inquiry-close { position: absolute; right: var(--space-5); top: var(--space-5); }
-.inquiry-link { background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: .2em; }
-.public-listing-card > a { min-height: auto; }
 
 /* Milestones mark finish lines within the existing ordered work list. */
 .item-list .item-card.milestone-row {
@@ -4839,6 +4850,20 @@ ul.admin-walkthrough-steps {
 .tenant-composer fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 1rem; }
 
 .listing-inquiry-button { min-height: 2.75rem; white-space: normal; }
-.listing-card-contact { padding: 0 var(--space-7) var(--space-7); }
-.listing-card-contact:has(.listing-inquiry-button) { margin-block-start: var(--space-5); }
+.public-listing-card-media > .listing-card-contact {
+  position: absolute;
+  inset-inline: var(--space-5);
+  inset-block-end: var(--space-5);
+  z-index: 2;
+
+  & .listing-inquiry-button {
+    width: 100%;
+    line-height: 1.25;
+    border-color: color-mix(in srgb, var(--color-primary-hover) 60%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 82%, transparent);
+
+    &:hover { background: color-mix(in srgb, var(--color-primary-hover) 94%, transparent); }
+    &:focus-visible { outline-color: var(--color-on-action); }
+  }
+}
 .listing-card-contact:empty { display: none; }

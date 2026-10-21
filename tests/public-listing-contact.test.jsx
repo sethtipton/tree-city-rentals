@@ -32,11 +32,21 @@ it("shows an action when the exact rent has not been entered yet", async () => {
   await act(async () => root.render(<ListingDetail listing={{ ...listing, rent_display_type: "exact", monthly_rent: null }} />));
   expect(container.textContent).toContain("Rent details coming soon"); expect(container.querySelector(".listing-inquiry-button")).not.toBeNull();
 });
-it("places directory inquiry buttons outside the listing navigation links", async () => {
+it("places directory inquiry buttons inside the image area and outside the listing navigation links", async () => {
   await act(async () => root.render(<PublicSite listings={[{ ...listing, rent_display_type: "exact" }]} />));
   const button = container.querySelector(".listing-inquiry-button");
   expect(button).not.toBeNull(); expect(button.closest("a")).toBeNull();
+  expect(button.closest(".listing-card-contact").parentElement.classList.contains("public-listing-card-media")).toBe(true);
   expect(container.querySelector(".public-listing-card > a").getAttribute("href")).toBe("/test-property/main-unit/");
+  await act(async () => button.click());
+  expect(container.querySelector("dialog").open).toBe(true);
+  expect(window.location.pathname).toBe("/");
+});
+it.each([["exact", "$1,400 / month"], ["starting-at", "Starting at $1,400 / month"], ["contact", null]])("keeps %s directory pricing without the redundant contact placeholder", async (rent_display_type, price) => {
+  await act(async () => root.render(<PublicSite listings={[{ ...listing, rent_display_type }]} />));
+  expect(container.querySelector(".public-listing-card .listing-rent")?.textContent ?? null).toBe(price);
+  expect(container.querySelector(".public-listing-card").textContent).not.toContain("Contact for rent");
+  expect(container.querySelector(".public-listing-card-media .listing-inquiry-button")).not.toBeNull();
 });
 it("retains the unavailable-recipient guard for priced listings", async () => {
   supabase.rpc.mockResolvedValue({ data: false });

@@ -207,33 +207,31 @@ function ListingCard({ listing, preview = false, priority = false }) {
   const imageSrc = photos[0]?.url || getPropertyImageBySlug(listing.property_slug);
   return (
     <li className="public-listing-card">
-      <a href={getPublicListingPath(listing.property_slug, listing.unit_slug)}>
-        <div className="public-listing-card-media">
-          {imageSrc ? (
-            <PropertyImage src={imageSrc} alt={photos[0]?.label || (photos.length ? `Photo of ${listing.property_name}` : `Exterior of ${listing.property_name}`)} priority={priority} />
-          ) : (
-            <Building2 size={28} aria-label={`Image unavailable for ${listing.property_name}`} />
-          )}
-          <span className={`listing-status listing-status-${listing.listing_status}`}>{getListingStatusLabel(listing.listing_status)}</span>
-        </div>
-        <div className="public-listing-card-content">
-          <h2>{title}</h2>
-          {listing.display_address && <p><MapPin size={16} aria-hidden="true" /> {listing.display_address}</p>}
-          {(listing.neighborhood || listing.available_date) && (
-            <div className="listing-card-details">
-              {listing.neighborhood && <span><MapPin size={15} aria-hidden="true" /> {listing.neighborhood}</span>}
-              {listing.available_date && <span><CalendarDays size={15} aria-hidden="true" /> Available {formatDate(listing.available_date)}</span>}
-            </div>
-          )}
-          <div className="listing-card-specs">
-            {listing.bedrooms != null && <span>{formatNumber(listing.bedrooms)} bd</span>}
-            {listing.full_bathrooms != null && <span>{formatNumber(listing.full_bathrooms)} ba</span>}
-            {listing.interior_square_feet != null && <span>{listing.interior_square_feet.toLocaleString()} sq ft</span>}
+      <div className="public-listing-card-media">
+        {imageSrc ? (
+          <PropertyImage src={imageSrc} alt={photos[0]?.label || (photos.length ? `Photo of ${listing.property_name}` : `Exterior of ${listing.property_name}`)} priority={priority} />
+        ) : (
+          <Building2 size={28} aria-label={`Image unavailable for ${listing.property_name}`} />
+        )}
+        <span className={`listing-status listing-status-${listing.listing_status}`}>{getListingStatusLabel(listing.listing_status)}</span>
+        {!preview && <div className="listing-card-contact"><ListingInquiry listing={listing} /></div>}
+      </div>
+      <a className="public-listing-card-content" href={getPublicListingPath(listing.property_slug, listing.unit_slug)}>
+        <h2>{title}</h2>
+        {listing.display_address && <p><MapPin size={16} aria-hidden="true" /> {listing.display_address}</p>}
+        {(listing.neighborhood || listing.available_date) && (
+          <div className="listing-card-details">
+            {listing.neighborhood && <span><MapPin size={15} aria-hidden="true" /> {listing.neighborhood}</span>}
+            {listing.available_date && <span><CalendarDays size={15} aria-hidden="true" /> Available {formatDate(listing.available_date)}</span>}
           </div>
-          <p className="listing-rent">{formatRent(listing)}</p>
+        )}
+        <div className="listing-card-specs">
+          {listing.bedrooms != null && <span>{formatNumber(listing.bedrooms)} bd</span>}
+          {listing.full_bathrooms != null && <span>{formatNumber(listing.full_bathrooms)} ba</span>}
+          {listing.interior_square_feet != null && <span>{listing.interior_square_feet.toLocaleString()} sq ft</span>}
         </div>
+        {listing.rent_display_type !== "contact" && <p className="listing-rent">{formatRent(listing)}</p>}
       </a>
-      {!preview && <div className="listing-card-contact"><ListingInquiry listing={listing} /></div>}
       {preview && <p className="preview-card-note">Preview</p>}
     </li>
   );
