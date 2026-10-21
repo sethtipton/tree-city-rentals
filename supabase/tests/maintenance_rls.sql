@@ -41,6 +41,9 @@ insert into public.property_members (workspace_id, property_id, email, role)
 values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1', 'property-admin@example.test', 'admin')
 on conflict (property_id, email) do update set role = excluded.role;
 
+-- Test RLS itself even when a fresh database denies anonymous table access.
+-- This grant exists only inside the test transaction and is rolled back.
+grant select on public.units, public.properties to anon;
 set local role anon;
 select is_empty('select * from public.units', 'anonymous callers cannot enumerate units');
 select is_empty('select * from public.properties', 'anonymous callers cannot enumerate properties');
