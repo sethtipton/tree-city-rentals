@@ -7,6 +7,10 @@ import { join } from "node:path";
 
 const target = process.argv.includes("--linked") ? "--linked" : "--local";
 if (process.argv.includes("--rehearse") && target !== "--linked") throw new Error("--rehearse requires --linked.");
+const localProjectId = target === "--local"
+  ? readFileSync("supabase/config.toml", "utf8").match(/^project_id\s*=\s*"([^"]+)"/m)?.[1]
+  : null;
+if (target === "--local" && !localProjectId) throw new Error("Local database tests require project_id in supabase/config.toml.");
 const stripTransaction = (sql) => sql.replace(/^(begin|commit|rollback);\s*$/gmi, "");
 let migrations = "";
 if (process.argv.includes("--rehearse")) {
@@ -38,7 +42,15 @@ try {
     }
     const file = join(directory, `${name}.sql`);
     writeFileSync(file, prefix + sql + "\nrollback;\n");
-    execFileSync("supabase", ["db", "query", target, "--file", file], { stdio: "inherit" });
+    if (target === "--linked") {
+      execFileSync("supabase", ["db", "query", "--linked", "--file", file], { stdio: "inherit" });
+    } else {
+      // The CLI's local query uses a prepared statement, which rejects these
+      // multi-statement transactions. Use psql in the disposable DB container.
+      execFileSync("docker", ["exec", "-i", `supabase_db_${localProjectId}`, "psql", "-U", "postgres", "-d", "postgres", "-X", "-v", "ON_ERROR_STOP=1", "-q"], {
+        input: readFileSync(file), stdio: ["pipe", "inherit", "inherit"],
+      });
+    }
     console.info(`${name}: passed; transaction rolled back.`);
   }
 } finally {
