@@ -20,10 +20,10 @@ afterAll(async () => rm(directory, { recursive: true, force: true }));
 async function html(path) { return new JSDOM(await readFile(join(directory, path, "index.html"), "utf8")); }
 it("writes listing-specific tags and readable listing HTML before JavaScript", async () => {
   const dom = await html("469-carthage/main-unit"); const doc = dom.window.document;
-  expect(doc.title).toContain("469 Carthage Ave"); expect(doc.querySelector('meta[name=description]').content).toContain("$1,250");
+  expect(doc.title).toContain("469 Carthage Ave"); expect(doc.querySelector('meta[name=description]').content).not.toContain("1,250");
   expect(doc.querySelector('link[rel=canonical]').href).toBe("https://rentals.example.test/469-carthage/main-unit/");
   expect(doc.querySelector('meta[property="og:image"]').content).toBe("https://rentals.example.test/assets/existing-exterior.webp");
-  expect(doc.querySelector("#root .public-listing-detail").textContent).toContain("$1,250 / month");
+  expect(doc.querySelector("#root .public-listing-detail").textContent).not.toContain("$1,250"); expect(doc.querySelector(".listing-rent")).toBeNull();
   expect(doc.querySelector("#root").hasAttribute("data-prerendered-public")).toBe(true); dom.window.close();
 });
 it("generates future properties without adding them to the hard-coded manifest", async () => {
@@ -40,7 +40,7 @@ it("keeps private fields and script injection out of the bootstrap data", async 
   const snapshot = JSON.parse(dom.window.document.getElementById("public-listings-data").textContent);
   expect(snapshot[1].listing_description).toBe(future.listing_description);
   expect(source).not.toContain("Never publish this"); expect(source).not.toContain("private@example.test");
-  expect(snapshot[1].monthly_rent).toBeNull(); dom.window.close();
+  expect(snapshot[1].monthly_rent).toBeUndefined(); expect(snapshot[1].rent_display_type).toBeUndefined(); dom.window.close();
 });
 it("canonicalizes saved mixed-case links and keeps unavailable routes out of search", async () => {
   const alias = await html("469-Carthage/Main-Unit");

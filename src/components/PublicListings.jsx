@@ -173,7 +173,6 @@ export function ListingDetail({ listing, preview = false, inquirySend }) {
         <div className="public-listing-hero-content">
           <h1>{title}</h1>
           {listing.display_address && <p className="listing-address"><MapPin size={18} aria-hidden="true" /> {listing.display_address}</p>}
-          <p className="listing-rent">{formatRent(listing)}</p>
           {!preview && <ListingInquiry key={listing.unit_id} listing={listing} send={inquirySend} />}
         </div>
       </header>
@@ -230,7 +229,6 @@ function ListingCard({ listing, preview = false, priority = false, eager = prior
           {listing.full_bathrooms != null && <span>{formatNumber(listing.full_bathrooms)} ba</span>}
           {listing.interior_square_feet != null && <span>{listing.interior_square_feet.toLocaleString()} sq ft</span>}
         </div>
-        {listing.rent_display_type !== "contact" && <p className="listing-rent">{formatRent(listing)}</p>}
       </a>
       {preview && <p className="preview-card-note">Preview</p>}
     </li>
@@ -252,13 +250,6 @@ function isPublicListing(listing) {
 
 function PublicNotFound() {
   return <section className="public-empty"><h1>That listing is not available.</h1><p>Browse current Tree City Rentals homes below.</p><a className="secondary-link" href={getPublicListingPath("")}>View available homes</a></section>;
-}
-
-function formatRent(listing) {
-  if (listing.rent_display_type === "contact") return "Contact for rent";
-  if (listing.monthly_rent == null) return "Rent details coming soon";
-  const rent = `$${listing.monthly_rent.toLocaleString()}`;
-  return listing.rent_display_type === "starting-at" ? `Starting at ${rent} / month` : `${rent} / month`;
 }
 
 function formatDate(value) {

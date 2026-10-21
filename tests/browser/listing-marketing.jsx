@@ -15,7 +15,7 @@ export function MarketingFixture() {
   const [listing, setListing] = useState(null);
   useEffect(() => { loadPublicListings().then(rows => setListing(rows[0] || null)); }, []);
   return <main className="public-site"><h1>Local listing marketing checks</h1><p>Sample prices. No emails are sent.</p>
-    {listing ? ["exact", "starting-at", "contact"].map(mode => <section key={mode} aria-label={`${mode} pricing`}><h2>{mode} pricing</h2><ListingDetail listing={{ ...listing, monthly_rent: 1400, rent_display_type: mode }} inquirySend={simulateSend} /></section>) : <p role="status">Loading a public listing fixture…</p>}
+    {listing ? [1400, null].map(amount => <section key={String(amount)} aria-label={`Internal rent ${amount}`}><h2>Internal rent stays private</h2><ListingDetail listing={{ ...listing, monthly_rent: amount }} inquirySend={simulateSend} /></section>) : <p role="status">Loading a public listing fixture…</p>}
   </main>;
 }
 createRoot(document.getElementById("root")).render(<MarketingFixture />);

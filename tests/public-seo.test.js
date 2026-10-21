@@ -10,16 +10,15 @@ describe("listing metadata", () => {
   it("derives unique factual defaults for future properties without extra fields", () => {
     const result = metadata();
     expect(result.title).toContain("Future property · DOWN"); expect(result.description).toContain("2-bedroom home for rent in Kent, OH");
-    expect(result.description).toContain("$1,500 per month"); expect(result.description.length).toBeLessThanOrEqual(160);
+    expect(result.description).not.toContain("1,500"); expect(result.description.length).toBeLessThanOrEqual(160);
     expect(result.canonical).toBe("https://treecityrentals.com/future-property/down/");
   });
   it("keeps sibling units distinct even with the same headline", () => {
     expect(metadata().title).not.toBe(metadata({ unit_name: "UP", unit_slug: "up" }, { unitSlug: "up" }).title);
   });
-  it.each(["contact", "starting-at"])("respects %s pricing", (rent_display_type) => {
-    const result = metadata({ rent_display_type });
-    if (rent_display_type === "contact") expect(result.description).not.toContain("1,500");
-    else expect(result.description).toContain("From $1,500");
+  it("keeps internal rent and retired display settings out of metadata", () => {
+    const result = metadata({ rent_display_type: "contact", monthly_rent: 1500 });
+    expect(result.description).not.toContain("1,500"); expect(result.description).not.toContain("Contact for rent");
   });
   it("handles missing optional fields and studio listings without inventing features", () => {
     const result = metadata({ bedrooms: 0, monthly_rent: null, listing_headline: "", listing_description: "", city: "", state: "" });
@@ -54,7 +53,7 @@ describe("listing metadata", () => {
 describe("public snapshot boundary", () => {
   it("excludes private fields, unpublished records, and hidden prices", () => {
     const rows = publicListingSnapshot([{ ...listing, private_note: "private", reporter_email: "private@example.test", rent_display_type: "contact" }, { ...listing, listing_published: false }, { ...listing, listing_status: "off-market" }]);
-    expect(rows).toHaveLength(1); expect(rows[0].private_note).toBeUndefined(); expect(rows[0].reporter_email).toBeUndefined(); expect(rows[0].monthly_rent).toBeNull();
+    expect(rows).toHaveLength(1); expect(rows[0].private_note).toBeUndefined(); expect(rows[0].reporter_email).toBeUndefined(); expect(rows[0].monthly_rent).toBeUndefined(); expect(rows[0].rent_display_type).toBeUndefined();
   });
   it("rejects traversal routes and malformed public API responses", () => {
     expect(() => publicListingSnapshot([{ ...listing, property_slug: "../private" }])).toThrow();

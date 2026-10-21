@@ -16,10 +16,10 @@ beforeEach(() => {
   container = document.createElement("div"); document.body.append(container); root = createRoot(container);
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.clearAllMocks(); window.history.replaceState(null, "", "/"); });
-it.each([["exact", "$1,400 / month"], ["starting-at", "Starting at $1,400 / month"], ["contact", "Contact for rent"]])("keeps the %s price and a separate inquiry action", async (rent_display_type, price) => {
+it.each([1400, null])("omits internal rent %s while keeping inquiries interactive", async (monthly_rent) => {
   const send = vi.fn().mockResolvedValue();
-  await act(async () => root.render(<ListingDetail listing={{ ...listing, rent_display_type }} inquirySend={send} />));
-  expect(container.querySelector(".listing-rent").textContent).toBe(price);
+  await act(async () => root.render(<ListingDetail listing={{ ...listing, monthly_rent }} inquirySend={send} />));
+  expect(container.querySelector(".listing-rent")).toBeNull(); expect(container.textContent).not.toContain("$1,400");
   const button = container.querySelector(".listing-inquiry-button"); expect(button.textContent).toBe("Ask about this home");
   await act(async () => button.click()); expect(container.querySelector("dialog").open).toBe(true);
   container.querySelector('[name="name"]').value = "Test visitor";
@@ -28,12 +28,12 @@ it.each([["exact", "$1,400 / month"], ["starting-at", "Starting at $1,400 / mont
   await act(async () => container.querySelector("form").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
   expect(send).toHaveBeenCalledOnce(); expect(container.textContent).toContain("Inquiry received");
 });
-it("shows an action when the exact rent has not been entered yet", async () => {
-  await act(async () => root.render(<ListingDetail listing={{ ...listing, rent_display_type: "exact", monthly_rent: null }} />));
-  expect(container.textContent).toContain("Rent details coming soon"); expect(container.querySelector(".listing-inquiry-button")).not.toBeNull();
+it("omits missing-rent placeholders and retains the inquiry action", async () => {
+  await act(async () => root.render(<ListingDetail listing={{ ...listing, monthly_rent: null }} />));
+  expect(container.textContent).not.toContain("Rent details coming soon"); expect(container.textContent).not.toContain("Contact for rent"); expect(container.querySelector(".listing-inquiry-button")).not.toBeNull();
 });
 it("places directory inquiry buttons inside the image area and outside the listing navigation links", async () => {
-  await act(async () => root.render(<PublicSite listings={[{ ...listing, rent_display_type: "exact" }]} />));
+  await act(async () => root.render(<PublicSite listings={[listing]} />));
   const button = container.querySelector(".listing-inquiry-button");
   expect(button).not.toBeNull(); expect(button.closest("a")).toBeNull();
   expect(button.closest(".listing-card-contact").parentElement.classList.contains("public-listing-card-media")).toBe(true);
@@ -42,16 +42,16 @@ it("places directory inquiry buttons inside the image area and outside the listi
   expect(container.querySelector("dialog").open).toBe(true);
   expect(window.location.pathname).toBe("/");
 });
-it.each([["exact", "$1,400 / month"], ["starting-at", "Starting at $1,400 / month"], ["contact", null]])("keeps %s directory pricing without the redundant contact placeholder", async (rent_display_type, price) => {
-  await act(async () => root.render(<PublicSite listings={[{ ...listing, rent_display_type }]} />));
-  expect(container.querySelector(".public-listing-card .listing-rent")?.textContent ?? null).toBe(price);
+it.each([1400, null])("does not expose internal rent %s in the directory", async (monthly_rent) => {
+  await act(async () => root.render(<PublicSite listings={[{ ...listing, monthly_rent }]} />));
+  expect(container.querySelector(".public-listing-card .listing-rent")).toBeNull(); expect(container.textContent).not.toContain("$1,400");
   expect(container.querySelector(".public-listing-card").textContent).not.toContain("Contact for rent");
   expect(container.querySelector(".public-listing-card-media .listing-inquiry-button")).not.toBeNull();
 });
 it("retains the unavailable-recipient guard for priced listings", async () => {
   supabase.rpc.mockResolvedValue({ data: false });
-  await act(async () => root.render(<ListingDetail listing={{ ...listing, rent_display_type: "exact" }} />));
-  expect(container.querySelector(".listing-rent").textContent).toContain("$1,400");
+  await act(async () => root.render(<ListingDetail listing={listing} />));
+  expect(container.querySelector(".listing-rent")).toBeNull();
   expect(container.querySelector(".listing-inquiry-button")).toBeNull();
 });
 it("does not offer real inquiries inside private listing previews", async () => {

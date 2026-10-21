@@ -16,8 +16,6 @@ export function createListingPreview(property, unit) {
     city: property.city || "",
     state: property.state || "",
     neighborhood: property.neighborhood || "",
-    monthly_rent: unit.monthly_rent,
-    rent_display_type: unit.rent_display_type,
     available_date: unit.available_date,
     lease_term: unit.lease_term || "",
     bedrooms: unit.bedrooms,

@@ -1,7 +1,7 @@
 export const PUBLIC_SITE_URL = "https://treecityrentals.com/";
 export const SITE_TITLE = "Tree City Rentals | Kent, Ohio Rentals";
 export const SITE_DESCRIPTION = "Explore available apartments and homes in Kent, Ohio from Tree City Rentals, including rentals near Kent State University.";
-const publicFields = ["property_id", "unit_id", "property_name", "property_slug", "unit_name", "unit_slug", "property_type", "listing_headline", "listing_status", "display_address", "city", "state", "neighborhood", "monthly_rent", "rent_display_type", "available_date", "lease_term", "bedrooms", "full_bathrooms", "half_bathrooms", "interior_square_feet", "listing_description", "amenities"];
+const publicFields = ["property_id", "unit_id", "property_name", "property_slug", "unit_name", "unit_slug", "property_type", "listing_headline", "listing_status", "display_address", "city", "state", "neighborhood", "available_date", "lease_term", "bedrooms", "full_bathrooms", "half_bathrooms", "interior_square_feet", "listing_description", "amenities"];
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const cleanText = value => String(value ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 
@@ -10,8 +10,6 @@ export function publicListingSnapshot(rows) {
   return rows.filter(row => row && row.listing_published !== false && ["available", "coming-soon"].includes(row.listing_status)).map(row => {
     if (!slugPattern.test(row.property_slug) || !slugPattern.test(row.unit_slug) || !row.unit_id || !row.property_id) throw new Error("A public listing has an invalid route or identity.");
     const listing = Object.fromEntries(publicFields.filter(field => row[field] !== undefined).map(field => [field, row[field]]));
-    // Contact pricing is a display choice; never put the hidden amount in HTML.
-    if (listing.rent_display_type === "contact") listing.monthly_rent = null;
     return listing;
   });
 }
@@ -39,9 +37,7 @@ function facts(listing) {
   const rooms = listing.bedrooms === 0 ? "Studio" : listing.bedrooms != null ? `${listing.bedrooms}-bedroom` : "";
   const location = [listing.city, listing.state].map(cleanText).filter(Boolean).join(", ");
   const details = [rooms, cleanText(listing.property_type) || "home", "for rent", location ? `in ${location}` : ""].filter(Boolean).join(" ");
-  const rent = listing.rent_display_type !== "contact" && listing.monthly_rent != null
-    ? `${listing.rent_display_type === "starting-at" ? "From " : ""}$${Number(listing.monthly_rent).toLocaleString("en-US")} per month.` : "Ask about rent and availability.";
-  return `${details}. ${rent}`;
+  return `${details}.`;
 }
 
 export function getPublicPageMetadata({ listings, propertySlug = "", unitSlug = "", siteUrl = PUBLIC_SITE_URL, imageForSlug = () => "", notFound = false }) {

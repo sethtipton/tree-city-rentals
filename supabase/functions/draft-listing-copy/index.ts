@@ -76,7 +76,7 @@ export default {
 
       const { data: unit, error: unitError } = await supabase
         .from("units")
-        .select("id, name, unit_number, monthly_rent, rent_display_type, available_date, lease_term, bedrooms, full_bathrooms, half_bathrooms, interior_square_feet, amenities")
+        .select("id, name, unit_number, available_date, lease_term, bedrooms, full_bathrooms, half_bathrooms, interior_square_feet, amenities")
         .eq("id", unitId)
         .eq("property_id", propertyId)
         .single();

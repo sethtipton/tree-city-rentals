@@ -152,13 +152,12 @@ function UnitEditor({ unit, busy, onSave, onSuggestListingField }) {
           <Field label="Unit number" name="unit_number" value={form.unit_number} onChange={change} onBlur={autosave.flush} />
           <SelectField label="Address visibility" name="address_visibility" value={form.address_visibility} onChange={change} options={ADDRESS_VISIBILITY_OPTIONS} />
         </div>
-        <p className="listing-editor-note">Only published Available and Coming soon listings appear publicly. Public changes appear after the next site refresh.</p>
+        <p className="listing-editor-note">Only published Available and Coming soon listings appear publicly. Changes appear after you publish the public site.</p>
       </details>
       <details>
         <summary><span>Rental details</span><ChevronDown size={18} aria-hidden="true" /></summary>
         <div className="listing-edit-fields">
-          <Field label="Monthly rent" name="monthly_rent" type="number" min="0" inputMode="numeric" value={form.monthly_rent} onChange={change} onBlur={autosave.flush} />
-          <SelectField label="Rent display type" name="rent_display_type" value={form.rent_display_type} onChange={change} options={RENT_DISPLAY_OPTIONS} />
+          <Field label="Monthly rent (internal)" name="monthly_rent" type="number" min="0" inputMode="numeric" value={form.monthly_rent} onChange={change} onBlur={autosave.flush} />
           <Field label="Available date" name="available_date" type="date" value={form.available_date} onChange={change} onBlur={autosave.flush} />
           <Field label="Lease term" name="lease_term" value={form.lease_term} onChange={change} onBlur={autosave.flush} placeholder="12 months" />
           <Field label="Bedrooms" name="bedrooms" type="number" min="0" step="0.5" inputMode="decimal" value={form.bedrooms} onChange={change} onBlur={autosave.flush} />
@@ -329,7 +328,6 @@ function toUnitForm(unit) {
     address_visibility: unit.address_visibility || "city",
     unit_number: unit.unit_number || "",
     monthly_rent: unit.monthly_rent ?? "",
-    rent_display_type: unit.rent_display_type || "exact",
     available_date: unit.available_date || "",
     lease_term: unit.lease_term || "",
     bedrooms: unit.bedrooms ?? "",
@@ -360,10 +358,4 @@ const ADDRESS_VISIBILITY_OPTIONS = [
   { value: "full", label: "Full address" },
   { value: "approximate", label: "Approximate location" },
   { value: "city", label: "City only" },
-];
-
-const RENT_DISPLAY_OPTIONS = [
-  { value: "exact", label: "Exact amount" },
-  { value: "starting-at", label: "Starting at" },
-  { value: "contact", label: "Contact for rent" },
 ];

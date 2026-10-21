@@ -688,13 +688,6 @@
     gap: var(--space-3);
   }
 
-  .listing-rent {
-    margin-block-start: auto;
-    color: var(--color-primary-hover);
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-black);
-  }
-
   .listing-description {
     max-width: 52rem;
     color: var(--color-text-muted);

@@ -1,6 +1,6 @@
 # Rental inquiry dialog — backend deployed, frontend local
 
-Local `main` contains a Contact for rent button on listing cards and listing detail views. It opens a native modal with name, email, and message. The button is absent unless the server reports a published Available/Coming soon listing with at least one valid property-admin email. Admin addresses are never returned to the browser. Exact advertised rent still displays normally.
+Listing cards and detail views have an Ask about this home button. It opens a native modal with name, email, and message. The button is absent unless the server reports a published Available/Coming soon listing with at least one valid property-admin email. Admin addresses are never returned to the browser. Stored monthly rent is internal and is not displayed publicly.
 
 Submitting saves an inquiry and separately queues one email per distinct assigned property-admin email. Workspace ownership alone is not a recipient assignment; viewers and blank/invalid addresses are excluded. Maintenance email opt-in is not consulted. Emails use the existing verified sender, visitor Reply-To and a listing link. The receipt says notifications are queued rather than promising inbox delivery.
 

@@ -12,16 +12,23 @@ current database records. Public changes become visible after a successful site
 release; new links are not exposed while their route files are still missing.
 An unavailable manifest leaves already prerendered content usable.
 
-`Refresh Public Listings` checks Supabase against the deployed revision every
-five minutes, away from the top of the hour. It requests the existing Pages
-workflow only when content differs and no Pages release is already active.
-The runner uses the existing public Supabase variables and its short-lived
-GitHub token; no deployment credentials are sent to the browser or Supabase.
-GitHub can delay scheduled workflows and disables schedules in inactive public
-repositories, so this is eventual publication, not an immediate-publication SLA.
-Failed comparisons/builds preserve the last deployed public release and fail
-visibly in Actions. The next scheduled check retries differences automatically.
-Run `Refresh Public Listings` manually in Actions to check immediately.
+Monthly rent is internal unit data. Public listing responses, snapshots,
+metadata, pages and AI listing-copy inputs exclude it. The former rent display
+type setting and its database column have been removed; internal monthly rent
+values are preserved.
+
+After saving listing edits, open **GitHub → Actions → Publish Public Site →
+Run workflow**, select `main`, and run it. The published site updates when the
+build and deployment finish. There is no polling schedule or automatic content
+check. Failed builds preserve the previous public release and fail visibly in
+Actions; correct the issue and run the workflow again.
+
+`publish-public-site.yml` builds and validates the frontend, deploys Pages, and
+checks the live canonical routes. It does not call backend tests or deploy
+Supabase functions. It supports both manual dispatch and reusable workflow calls.
+Normal pushes to `main` run `Deploy Application`, which deploys the backend and
+then calls the same public-site workflow. The shared Pages concurrency group
+serializes publication runs.
 
 Before upload, `node scripts/check-public-pages.mjs` verifies the manifest hash,
 the exact sitemap URL set, prerendered content, metadata, internal destinations,
@@ -41,6 +48,5 @@ the live homepage before deployment. The CLI is pinned to Lighthouse 13.5.0 to
 match the original audit. Raw reports stay under `audit-reports/`; treat field
 Core Web Vitals and search outcomes separately from these lab measurements.
 
-References: [workflow dispatch authentication](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow),
-[scheduled workflow limitations](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule),
+References: [reusable workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows),
 [responsive images](https://web.dev/learn/design/responsive-images).
