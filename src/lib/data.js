@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { WORKSPACE_NAME } from "./seed";
+import { loadReleasedPublicListings } from "./publicRelease";
 
 export async function getSession() {
   if (!supabase) return null;
@@ -69,9 +70,8 @@ export async function loadProperties(workspaceId) {
 }
 
 export async function loadPublicListings() {
-  const { data, error } = await supabase.rpc("get_public_listings");
-  if (error) throw error;
-  return data || [];
+  // Only expose links whose pages were published in the same Pages artifact.
+  return loadReleasedPublicListings();
 }
 
 export async function updateProperty(id, patch) {

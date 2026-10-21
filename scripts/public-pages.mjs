@@ -4,6 +4,7 @@ import { JSDOM } from "jsdom";
 import { PROPERTY_IMAGE_SOURCES } from "../src/lib/propertyImageSources.js";
 import { INITIAL_PROPERTIES, UNIT_ROUTE_ALIASES } from "../src/lib/seed.js";
 import { canonicalSiteUrl, getPublicPageMetadata, publicListingSnapshot, publicPath, updatePublicMetadata } from "../src/lib/publicSeo.js";
+import { createPublicRelease } from "./public-release.mjs";
 
 const escapeXml = value => String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[char]);
 const safeJson = value => JSON.stringify(value).replace(/[<>&\u2028\u2029]/g, char => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
@@ -20,6 +21,7 @@ export async function fetchPublicListings({ url, key, fetcher = fetch }) {
 
 export async function generatePublicPages({ distDir, listings: rows, siteUrl, renderPage, offline = false }) {
   const listings = publicListingSnapshot(rows);
+  const release = { ...createPublicRelease(listings), sourceRevision: process.env.GITHUB_SHA || null };
   const origin = canonicalSiteUrl(siteUrl);
   const template = await readFile(join(distDir, "index.html"), "utf8");
   let manifest = {};
@@ -48,6 +50,8 @@ export async function generatePublicPages({ distDir, listings: rows, siteUrl, re
       const dom = new JSDOM(template);
       const doc = dom.window.document;
       updatePublicMetadata(doc, metadata);
+      const revision = doc.createElement('meta'); revision.name = 'public-content-revision'; revision.content = release.revision; doc.head.append(revision);
+      if (release.sourceRevision) { const build = doc.createElement('meta'); build.name = 'public-build-revision'; build.content = release.sourceRevision; doc.head.append(build); }
       const root = doc.getElementById("root");
       if (root && !privatePage && renderPage) {
         root.innerHTML = renderPage(listings, route);
@@ -87,6 +91,7 @@ export async function generatePublicPages({ distDir, listings: rows, siteUrl, re
   }
   await page("");
   await writeFile(join(distDir, ".nojekyll"), "");
+  await writeFile(join(distDir, 'public-listings.json'), `${JSON.stringify(release)}\n`);
   const urls = [...canonicalPaths].sort().map(path => `<url><loc>${escapeXml(new URL(path, origin).href)}</loc></url>`).join("");
   await writeFile(join(distDir, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>\n`);
   await writeFile(join(distDir, "robots.txt"), `User-agent: *\nAllow: /\nDisallow: /maintenance/\nSitemap: ${new URL("sitemap.xml", origin).href}\n`);

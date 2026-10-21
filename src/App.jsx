@@ -27,7 +27,7 @@ export default function App({ initialListings = null }) {
     if (initialListings === null) setBusy(true);
     setError("");
     loadPublicListings().then(value => { if (active) setListings(value); })
-      .catch(() => { if (active) setError("Available homes could not be loaded. Please refresh to try again."); })
+      .catch(() => { if (active && initialListings === null) setError("Available homes could not be loaded. Please refresh to try again."); })
       .finally(() => { if (active) setBusy(false); });
     return () => { active = false; };
   }, [session, initialListings]);

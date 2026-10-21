@@ -152,7 +152,7 @@ function UnitEditor({ unit, busy, onSave, onSuggestListingField }) {
           <Field label="Unit number" name="unit_number" value={form.unit_number} onChange={change} onBlur={autosave.flush} />
           <SelectField label="Address visibility" name="address_visibility" value={form.address_visibility} onChange={change} options={ADDRESS_VISIBILITY_OPTIONS} />
         </div>
-        <p className="listing-editor-note">Only published Available and Coming soon listings appear publicly.</p>
+        <p className="listing-editor-note">Only published Available and Coming soon listings appear publicly. Public changes appear after the next site refresh.</p>
       </details>
       <details>
         <summary><span>Rental details</span><ChevronDown size={18} aria-hidden="true" /></summary>

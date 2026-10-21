@@ -1,0 +1,38 @@
+name: Refresh Public Listings
+
+on:
+  schedule:
+    - cron: '2-59/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: public-listing-refresh
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Compare public data with the deployed release
+        id: content
+        env:
+          VITE_PUBLIC_SITE_URL: ${{ vars.VITE_PUBLIC_SITE_URL || 'https://treecityrentals.com/' }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: node scripts/check-public-content.mjs
+      - name: Request a release when public content changed
+        if: steps.content.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/dispatch-public-refresh.mjs

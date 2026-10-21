@@ -101,7 +101,7 @@ function PublicListingDirectory({ listings, busy }) {
         <section className="public-empty"><h2>No homes are available right now.</h2><p>Check back soon for upcoming listings.</p></section>
       ) : (
         <ul className="public-listing-grid" role="list">
-          {listings.map((listing, index) => <ListingCard key={listing.unit_id} listing={listing} priority={index === 0} />)}
+          {listings.map((listing, index) => <ListingCard key={listing.unit_id} listing={listing} priority={index < 2} eager={index < 2} />)}
         </ul>
       )}
     </section>
@@ -133,7 +133,7 @@ export function PublicPropertyPage({ property, preview = false }) {
         {(property.property_type || location) && <p>{[property.property_type, location].filter(Boolean).join(" / ")}</p>}
       </header>
       <ul className="public-property-listings" role="list">
-        {property.listings.map((listing, index) => <ListingCard key={listing.unit_id} listing={listing} preview={preview} priority={index === 0} />)}
+        {property.listings.map((listing, index) => <ListingCard key={listing.unit_id} listing={listing} preview={preview} priority={index < 2} eager={index < 2} />)}
       </ul>
     </section>
   );
@@ -201,7 +201,7 @@ export function ListingDetail({ listing, preview = false, inquirySend }) {
   );
 }
 
-function ListingCard({ listing, preview = false, priority = false }) {
+function ListingCard({ listing, preview = false, priority = false, eager = priority }) {
   const title = listing.listing_headline || `${listing.property_name} ${listing.unit_name}`;
   const photos = useListingPhotos(listing.unit_id, preview);
   const imageSrc = photos[0]?.url || getPropertyImageBySlug(listing.property_slug);
@@ -209,7 +209,7 @@ function ListingCard({ listing, preview = false, priority = false }) {
     <li className="public-listing-card">
       <div className="public-listing-card-media">
         {imageSrc ? (
-          <PropertyImage src={imageSrc} alt={photos[0]?.label || (photos.length ? `Photo of ${listing.property_name}` : `Exterior of ${listing.property_name}`)} priority={priority} />
+          <PropertyImage src={imageSrc} alt={photos[0]?.label || (photos.length ? `Photo of ${listing.property_name}` : `Exterior of ${listing.property_name}`)} priority={priority} eager={eager} sizes="(max-width: 52rem) 650px, 450px" />
         ) : (
           <Building2 size={28} aria-label={`Image unavailable for ${listing.property_name}`} />
         )}

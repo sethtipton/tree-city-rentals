@@ -8,6 +8,7 @@ import imageFourFiftyOnePark from "../../property-images/processed/451-park-ave.
 import imageFourFiftyEightMain from "../../property-images/processed/458-w-main-st.webp";
 import imageFourSixtyNineCarthage from "../../property-images/processed/469-carthage-ave.webp";
 import imageHudsonDuplex from "../../property-images/processed/1065-hudson-rd.webp";
+import { PROPERTY_IMAGE_SOURCES } from './propertyImageSources';
 
 const PROPERTY_IMAGES = {
   "451 Park": imageFourFiftyOnePark,
@@ -26,6 +27,20 @@ const PROPERTY_IMAGES = {
 const PROPERTY_IMAGES_BY_SLUG = Object.fromEntries(
   Object.entries(PROPERTY_IMAGES).map(([propertyName, image]) => [toPropertySlug(propertyName), image]),
 );
+
+const responsiveFiles = import.meta.glob('../../property-images/responsive/*.webp', { eager: true, query: '?url', import: 'default' });
+const responsiveBySource = new Map(Object.entries(PROPERTY_IMAGE_SOURCES).map(([slug, file]) => {
+  const src = PROPERTY_IMAGES_BY_SLUG[slug];
+  const name = file.replace('.webp', '');
+  const variants = [480, 768, 1024].map(width => ({ width, src: responsiveFiles[`../../property-images/responsive/${name}-${width}.webp`] })).filter(image => image.src);
+  return [src, variants];
+}));
+
+export function getResponsivePropertyImage(src) {
+  const variants = responsiveBySource.get(src);
+  if (!variants?.length) return { src };
+  return { src: variants.at(-1).src, srcSet: variants.map(image => `${image.src} ${image.width}w`).join(', ') };
+}
 
 export function getPropertyImage(propertyName) {
   return PROPERTY_IMAGES[propertyName] || "";

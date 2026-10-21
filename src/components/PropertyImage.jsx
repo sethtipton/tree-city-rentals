@@ -1,13 +1,16 @@
-export function PropertyImage({ src, alt, priority = false, onError }) {
+import { getResponsivePropertyImage } from '../lib/propertyImages';
+
+export function PropertyImage({ src, alt, priority = false, eager = priority, sizes = '100vw', onError }) {
   if (!src) return null;
 
   return (
     <img
-      src={src}
+      {...getResponsivePropertyImage(src)}
+      sizes={sizes}
       alt={alt}
       width="1024"
       height="768"
-      loading={priority ? "eager" : "lazy"}
+      loading={eager ? "eager" : "lazy"}
       fetchPriority={priority ? "high" : "auto"}
       decoding="async"
       onError={onError}

@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "images:build": "node scripts/generate-public-images.mjs",
+    "prebuild": "npm run images:build",
     "build": "vite build",
     "postbuild": "vite build --ssr src/prerender.jsx --outDir node_modules/.cache/tree-city-prerender --emptyOutDir && node scripts/create-pages-fallbacks.mjs",
     "lint": "oxlint",
@@ -28,6 +30,7 @@
     "globals": "^17.8.0",
     "jsdom": "^30.1.0",
     "oxlint": "^1.75.0",
+    "sharp": "^0.35.5",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
   }
